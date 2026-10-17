@@ -1,0 +1,1 @@
+export default function AnnouncementBar() { return <div className="bg-brand px-4 py-2 text-center text-xs font-extrabold tracking-wide text-zinc-950">YOUR NEXT RIDE STARTS HERE · ORDER CONVENIENTLY ON WHATSAPP</div>; }

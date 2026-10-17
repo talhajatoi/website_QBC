@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { publicReviewList, publicReviews, reviewSummary, submitCustomerReview, topReview } from '../controllers/review.controller.js';
+import { publicWriteLimiter } from '../middleware/rateLimit.middleware.js';
+import { removeUploadedFile, uploadReviewImage } from '../middleware/upload.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { customerReviewCreateSchema, publicReviewQuerySchema, reviewQuerySchema } from '../validators/review.validator.js';
+const router = Router();
+const validateReviewBody = (schema) => { const validateBody = validate(schema); return (req, res, next) => validateBody(req, res, (error) => { if (error && req.file) return removeUploadedFile(req.file).then(() => next(error), next); next(error); }); };
+router.get('/reviews', validate(publicReviewQuerySchema, 'query'), publicReviewList);
+router.post('/products/:productId/reviews', publicWriteLimiter, ...uploadReviewImage, validateReviewBody(customerReviewCreateSchema), submitCustomerReview);
+router.get('/products/:productId/reviews', validate(reviewQuerySchema, 'query'), publicReviews);
+router.get('/products/:productId/reviews/top', topReview);
+router.get('/products/:productId/reviews/summary', reviewSummary);
+export default router;

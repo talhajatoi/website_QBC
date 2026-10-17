@@ -1,0 +1,10 @@
+import api, { authHeaders } from './api';
+export const getPaymentInstructions = () => api.get('/payments/instructions');
+export const createOrder = (data, idempotencyKey) => api.post('/orders', data, { headers: { 'Idempotency-Key': idempotencyKey } });
+export const getOrder = (orderNumber, accessToken) => api.get(`/orders/${orderNumber}`, { headers: { 'X-Order-Access-Token': accessToken } });
+export const getAdminOrders = (params) => api.get('/admin/orders', { params, headers: authHeaders() });
+export const getAdminOrder = (id) => api.get(`/admin/orders/${id}`, { headers: authHeaders() });
+export const updateOrderStatus = (id, status) => api.patch(`/admin/orders/${id}/status`, { status }, { headers: authHeaders() });
+export const updatePaymentStatus = (id, paymentStatus) => api.patch(`/admin/orders/${id}/payment-status`, { paymentStatus }, { headers: authHeaders() });
+export const updateAdvancePaymentStatus = (id, advancePaymentStatus) => api.patch(`/admin/orders/${id}/advance-payment-status`, { advancePaymentStatus }, { headers: authHeaders() });
+export const updateOrderNotes = (id, internalNotes) => api.patch(`/admin/orders/${id}/notes`, { internalNotes }, { headers: authHeaders() });

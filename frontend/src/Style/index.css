@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "./global.css";
+@import "./components.css";
+@import "./animations.css";
+@import "./admin.css";
+@import "./responsive.css";
+
+@theme {
+  --color-brand: #ffd400;
+  --color-brand-dark: #9a7600;
+  --color-ink: #111111;
+  --font-display: "Arial Black", "Arial", sans-serif;
+}

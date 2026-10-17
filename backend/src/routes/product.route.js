@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { featuredProducts, getProduct, listProducts, productsByCategory, searchProducts } from '../controllers/product.controller.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { productQuerySchema } from '../validators/product.validator.js';
+const router = Router();
+router.get('/', validate(productQuerySchema, 'query'), listProducts);
+router.get('/featured', featuredProducts);
+router.get('/search', searchProducts);
+router.get('/categories/:categorySlug', validate(productQuerySchema, 'query'), productsByCategory);
+router.get('/:idOrSlug', getProduct);
+export default router;

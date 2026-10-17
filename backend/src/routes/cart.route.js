@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { addToCart, clearCart, getCart, removeCartItem, updateCartItem } from '../controllers/cart.controller.js';
+import { publicWriteLimiter } from '../middleware/rateLimit.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { cartAddSchema, cartQuantitySchema } from '../validators/order.validator.js';
+const router = Router();
+router.get('/', getCart);
+router.post('/items', publicWriteLimiter, validate(cartAddSchema), addToCart);
+router.patch('/items/:itemId', publicWriteLimiter, validate(cartQuantitySchema), updateCartItem);
+router.delete('/items/:itemId', removeCartItem);
+router.delete('/', clearCart);
+export default router;

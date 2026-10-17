@@ -1,0 +1,2 @@
+import { PackageOpen } from 'lucide-react';
+export default function EmptyState({ title = 'Nothing here yet', text = 'Check back soon or adjust your filters.', action }) { return <div className="rounded-3xl border border-dashed border-zinc-300 bg-white px-6 py-16 text-center"><PackageOpen className="mx-auto mb-4 h-10 w-10 text-brand-dark" /><h2 className="text-xl font-black">{title}</h2><p className="mx-auto mt-2 max-w-md text-zinc-600">{text}</p>{action && <div className="mt-6">{action}</div>}</div>; }

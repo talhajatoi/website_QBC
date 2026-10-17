@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { changePassword, login, logout, profile } from '../controllers/auth.controller.js';
+import { requireAuth } from '../middleware/auth.middleware.js';
+import { loginLimiter } from '../middleware/rateLimit.middleware.js';
+import { validate } from '../middleware/validate.middleware.js';
+import { loginSchema, passwordSchema } from '../validators/auth.validator.js';
+const router = Router();
+router.post('/login', loginLimiter, validate(loginSchema), login);
+router.post('/logout', requireAuth, logout);
+router.get('/me', requireAuth, profile);
+router.patch('/password', requireAuth, validate(passwordSchema), changePassword);
+export default router;

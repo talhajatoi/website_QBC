@@ -1,0 +1,12 @@
+import { z } from 'zod';
+import { objectId, pagination } from './common.js';
+const item = z.object({ productId: objectId, quantity: z.coerce.number().int().min(1).max(20), selectedOptions: z.object({ size: z.string().trim().max(100).optional(), color: z.string().trim().max(100).optional() }).default({}) });
+const attribution = z.object({ utm_source: z.string().trim().max(200).optional(), utm_medium: z.string().trim().max(200).optional(), utm_campaign: z.string().trim().max(300).optional(), utm_content: z.string().trim().max(300).optional(), fbclid: z.string().trim().max(500).optional(), ig_source: z.string().trim().max(200).optional() }).default({});
+export const orderCreateSchema = z.object({ customer: z.object({ name: z.string().trim().min(2).max(120), whatsapp: z.string().trim().regex(/^\+?[0-9\s-]{8,20}$/, 'Invalid WhatsApp number'), address: z.string().trim().min(10).max(1000) }), items: z.array(item).min(1).max(30), paymentMethod: z.enum(['cash_on_delivery', 'bank_transfer', 'other']).default('cash_on_delivery'), customerNotes: z.string().trim().max(2000).optional().default(''), attribution });
+export const orderQuerySchema = pagination.extend({ status: z.enum(['pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'failed']).optional() });
+export const orderStatusSchema = z.object({ status: z.enum(['pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'failed']) });
+export const paymentStatusSchema = z.object({ paymentStatus: z.enum(['unpaid', 'pending', 'paid', 'refunded', 'failed']) });
+export const advancePaymentStatusSchema = z.object({ advancePaymentStatus: z.enum(['pending', 'paid']) });
+export const notesSchema = z.object({ internalNotes: z.string().trim().max(5000) });
+export const cartAddSchema = z.object({ productId: objectId, quantity: z.coerce.number().int().min(1).max(20), selectedOptions: z.object({ size: z.string().trim().max(100).optional(), color: z.string().trim().max(100).optional() }).default({}) });
+export const cartQuantitySchema = z.object({ quantity: z.coerce.number().int().min(1).max(20) });

@@ -12,5 +12,8 @@
   "scripts": {
     "build": "npm run build --workspace frontend",
     "start": "npm run start --workspace backend"
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
   }
 }

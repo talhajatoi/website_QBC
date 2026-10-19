@@ -26,6 +26,20 @@ From getting around town to setting out on a weekend adventure, the right bicycl
 
 Have a question or looking for your next bicycle? **Contact Quetta Bicycles** through the contact information provided on the website. We’ll be glad to help you get started.
 
+## Development and deployment
+
+The frontend and backend can be installed, built, and run together from the repository root with Node.js 20.19+ (or 22.12+) and a reachable MongoDB deployment.
+
+```powershell
+npm install
+Copy-Item backend\.env.example backend\.env
+# Edit backend\.env with a real MongoDB URI and a strong JWT_SECRET.
+npm run build
+npm start
+```
+
+The backend serves the built React app and its `/api` endpoints on the same origin. Configure `CLIENT_URL` in `backend\.env` with the deployed website origin (comma-separated if additional browser origins need API access). For local development, start the backend with `npm run dev --workspace backend` and the frontend with `npm run dev --workspace frontend` in separate terminals; Vite proxies API and upload requests to the backend on port 5000.
+
 ## Find your inspiration
 
 <div align="center">

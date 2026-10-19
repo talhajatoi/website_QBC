@@ -7,5 +7,9 @@ export default defineConfig({
   plugins: [react(),tailwindcss(),],
    server: {
     allowedHosts: ['quettabikesclub.com', 'www.quettabikesclub.com'],
+    proxy: {
+      '/api': 'http://localhost:5000',
+      '/uploads': 'http://localhost:5000',
+    },
   },
 })

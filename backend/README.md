@@ -14,7 +14,7 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HTTPS, a distinct long random JWT secret, and a comma-separated allowlist in `CLIENT_URL`. Start with `npm start` only after the deployment environment supplies all required values.
+For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HTTPS, a distinct long random JWT secret, and set `CLIENT_URL` to the deployed website origin (plus any additional allowed browser origins). The backend serves the frontend build from `frontend/dist`; from the repository root, `npm run build` creates it and `npm start` starts the combined app. Start only after the deployment environment supplies all required values.
 
 ## Environment
 

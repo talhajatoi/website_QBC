@@ -12,8 +12,5 @@
   "scripts": {
     "build": "npm run build --workspace frontend",
     "start": "npm run start --workspace backend"
-  },
-  "dependencies": {
-    "@rolldown/binding-wasm32-wasi": "^1.2.14"
   }
 }

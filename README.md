@@ -38,7 +38,7 @@ npm run build
 npm start
 ```
 
-The backend serves the built React app and its `/api` endpoints on the same origin. Configure `CLIENT_URL` in `backend\.env` with the deployed website origin (comma-separated if additional browser origins need API access). For local development, start the backend with `npm run dev --workspace backend` and the frontend with `npm run dev --workspace frontend` in separate terminals; Vite proxies API and upload requests to the backend on port 5000.
+The backend serves the built React app and its `/api` endpoints on the same origin. Configure `CLIENT_URL` in `backend\.env` with the deployed website origin (comma-separated if additional browser origins need API access). For local development, run `npm run dev` from the root to start the frontend, then start the backend with `npm run dev --workspace backend` in a second terminal; Vite proxies API and upload requests to the backend on port 5000.
 
 ## Find your inspiration
 

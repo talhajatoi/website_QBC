@@ -127,7 +127,7 @@ It is idempotent and hard-fails in production. Demo records can be shown only wi
 npm test
 ```
 
-Tests use `mongodb-memory-server`, never your configured production database. They cover health/database readiness, authentication, authorization, catalogue CRUD and validation, review aggregation/demo exclusion, cart totals and stock checks, order totals/WhatsApp URLs, order access control, invalid transitions, and centralized errors.
+The backend has no compilation step; `npm run build` checks the server entry point's JavaScript syntax. Tests use `mongodb-memory-server`, never your configured production database. They cover health/database readiness, authentication, authorization, catalogue CRUD and validation, review aggregation/demo exclusion, cart totals and stock checks, order totals/WhatsApp URLs, order access control, invalid transitions, and centralized errors.
 
 ## Production notes
 

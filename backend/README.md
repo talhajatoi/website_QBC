@@ -14,7 +14,7 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HTTPS, a distinct long random JWT secret, and set `CLIENT_URL` to the deployed website origin (plus any additional allowed browser origins). The backend serves the frontend build from `frontend/dist`; from the repository root, `npm run build` creates it and `npm start` starts the combined app. Start only after the deployment environment supplies all required values.
+For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HTTPS, a distinct long random JWT secret, and a comma-separated allowlist in `CLIENT_URL`. Start with `npm start` only after the deployment environment supplies all required values.
 
 ## Environment
 
@@ -127,7 +127,7 @@ It is idempotent and hard-fails in production. Demo records can be shown only wi
 npm test
 ```
 
-The backend has no compilation step; `npm run build` checks the server entry point's JavaScript syntax. Tests use `mongodb-memory-server`, never your configured production database. They cover health/database readiness, authentication, authorization, catalogue CRUD and validation, review aggregation/demo exclusion, cart totals and stock checks, order totals/WhatsApp URLs, order access control, invalid transitions, and centralized errors.
+Tests use `mongodb-memory-server`, never your configured production database. They cover health/database readiness, authentication, authorization, catalogue CRUD and validation, review aggregation/demo exclusion, cart totals and stock checks, order totals/WhatsApp URLs, order access control, invalid transitions, and centralized errors.
 
 ## Production notes
 

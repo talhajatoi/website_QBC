@@ -11,7 +11,7 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-The backend must be running on port 5000 for local development; Vite proxies `/api` and `/uploads` requests to it. `VITE_API_BASE_URL` defaults to `/api`, which also lets the production frontend use the backend on the same origin. This project deliberately uses `/api`, because that is the prefix implemented by the backend—not `/api/v1`.
+The backend must be running on the URL set in `VITE_API_BASE_URL` (default: `http://localhost:5000/api`). This project deliberately uses `/api`, because that is the prefix implemented by the backend—not `/api/v1`.
 
 ## Commands
 

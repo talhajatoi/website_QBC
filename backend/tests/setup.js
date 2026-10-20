@@ -1,6 +1,7 @@
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'test-only-secret-that-is-longer-than-thirty-two-characters';
 process.env.JWT_EXPIRES_IN = '1h';
+process.env.FRONTEND_URL = 'https://store.example.com';
 process.env.CLIENT_URL = 'http://localhost:5173';
 process.env.WHATSAPP_BUSINESS_NUMBER = '923001234567';
 process.env.DELIVERY_CHARGE_PKR = '250';

@@ -11,7 +11,8 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('15m'),
-  CLIENT_URL: z.string().default('http://localhost:5173'),
+  FRONTEND_URL: z.string().optional(),
+  CLIENT_URL: z.string().optional(),
   DNS_SERVERS: z.string().optional(),
   WHATSAPP_BUSINESS_NUMBER: z.string().regex(/^\d{8,15}$/).optional(),
   COD_ADVANCE_PAYMENT_PROVIDER: z.string().trim().max(80).optional(),
@@ -42,6 +43,9 @@ if (!parsed.success) {
 
 export const env = Object.freeze({
   ...parsed.data,
-  allowedOrigins: parsed.data.CLIENT_URL.split(',').map((origin) => origin.trim()).filter(Boolean),
+  allowedOrigins: [...new Set([
+    ...(parsed.data.FRONTEND_URL || parsed.data.CLIENT_URL || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+    ...(parsed.data.NODE_ENV === 'production' ? [] : ['http://localhost:5173', 'http://127.0.0.1:5173']),
+  ])],
   dnsServers: parsed.data.DNS_SERVERS?.split(',').map((server) => server.trim()).filter(Boolean) || [],
 });

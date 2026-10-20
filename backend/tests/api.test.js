@@ -21,7 +21,22 @@ beforeEach(async () => { await mongoose.connection.db.dropDatabase(); await Admi
 afterAll(async () => { await disconnectDatabase(); await globalThis.mongoServer.stop(); });
 
 describe('platform basics and authentication', () => {
-  it('reports health and has a live isolated database connection', async () => { const response = await request(app).get('/api/health'); expect(response.status).toBe(200); expect(response.body.data.status).toBe('ok'); expect(mongoose.connection.readyState).toBe(1); });
+  it('reports health and allows configured frontend and local origins through CORS', async () => {
+    const response = await request(app).get('/api/health');
+    expect(response.status).toBe(200);
+    expect(response.body.data.status).toBe('ok');
+    expect(mongoose.connection.readyState).toBe(1);
+    const preflight = await request(app).options('/api/orders')
+      .set('Origin', 'https://store.example.com')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'authorization,content-type,x-cart-token,x-order-access-token');
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers['access-control-allow-origin']).toBe('https://store.example.com');
+    expect(preflight.headers['access-control-allow-headers']).toContain('x-order-access-token');
+    const localCorsResponse = await request(app).get('/api/health').set('Origin', 'http://localhost:5173');
+    expect(localCorsResponse.status).toBe(200);
+    expect(localCorsResponse.headers['access-control-allow-origin']).toBe('http://localhost:5173');
+  });
   it('surfaces a database connection failure and can reconnect to the isolated database', async () => { await disconnectDatabase(); await expect(connectDatabase('mongodb://127.0.0.1:1/unreachable', { serverSelectionTimeoutMS: 100 })).rejects.toThrow(); await connectDatabase(process.env.MONGODB_URI); expect(mongoose.connection.readyState).toBe(1); });
   it('rejects invalid credentials and blocks anonymous admin calls', async () => { const invalid = await request(app).post('/api/auth/login').send({ email: adminCredentials.email, password: 'wrong' }); const denied = await request(app).get('/api/admin/products'); expect(invalid.status).toBe(401); expect(invalid.body.message).toBe('Invalid email or password'); expect(denied.status).toBe(401); });
   it('validates requests and returns centralized missing-route errors', async () => { const invalid = await request(app).post('/api/admin/products').set(authHeader(token)).send({ name: 'x' }); const missing = await request(app).get('/api/nope'); expect(invalid.status).toBe(422); expect(missing.status).toBe(404); });

@@ -11,7 +11,7 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-The backend must be running on the URL set in `VITE_API_BASE_URL` (default: `http://localhost:5000/api`). This project deliberately uses `/api`, because that is the prefix implemented by the backend—not `/api/v1`.
+The backend must be running on the URL set in `VITE_API_URL` (default: `http://localhost:5000/api`). Include the `/api` prefix; this project deliberately uses `/api`, not `/api/v1`.
 
 ## Commands
 
@@ -26,10 +26,16 @@ npm run lint
 
 | Variable | Purpose |
 | --- | --- |
-| `VITE_API_BASE_URL` | Public API base URL; no trailing slash. |
+| `VITE_API_URL` | Public API base URL, including `/api`; defaults to `http://localhost:5000/api`. |
 | `VITE_STORE_NAME` | Optional display label for future branding use. |
 
 Do not put MongoDB URIs, JWT signing secrets, admin passwords, or other private credentials in frontend variables.
+
+## Render deployment
+
+In the frontend Render service, add `VITE_API_URL` with the backend API URL, for example `https://your-backend.onrender.com/api`, then redeploy the frontend so Vite embeds the value in the production build. In the backend Render service, set `FRONTEND_URL` to the frontend's public origin only (for example `https://your-frontend.onrender.com`, without `/api` or a trailing slash). Add a comma-separated list if the site uses more than one origin.
+
+For React Router deep links to load on refresh, configure the Render Static Site rewrite: source `/*`, destination `/index.html`, action `Rewrite`.
 
 ## Backend integration
 

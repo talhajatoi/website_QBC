@@ -35,7 +35,17 @@ Do not put MongoDB URIs, JWT signing secrets, admin passwords, or other private 
 
 In the frontend Render service, add `VITE_API_URL` with the backend API URL, for example `https://your-backend.onrender.com/api`, then redeploy the frontend so Vite embeds the value in the production build. In the backend Render service, set `FRONTEND_URL` to the frontend's public origin only (for example `https://your-frontend.onrender.com`, without `/api` or a trailing slash). Add a comma-separated list if the site uses more than one origin.
 
-For React Router deep links to load on refresh, configure the Render Static Site rewrite: source `/*`, destination `/index.html`, action `Rewrite`.
+### React Router refresh and direct links
+
+The app uses `BrowserRouter`. In the Render Dashboard, open the **frontend Static Site** (not the backend web service), then go to **Settings → Redirects/Rewrites** and add:
+
+| Field | Value |
+| --- | --- |
+| Source | `/*` |
+| Destination | `/index.html` |
+| Action | `Rewrite` |
+
+Save the rule and redeploy the frontend. Render applies rewrite rules from the dashboard; adding a rewrite file to this repository does not configure Render's CDN. The rewrite lets direct links and refreshes such as `/products`, `/products/:slug`, and `/admin/login` load the React app, where React Router selects the page. The React app still displays its own not-found page for unrecognized routes.
 
 ## Backend integration
 

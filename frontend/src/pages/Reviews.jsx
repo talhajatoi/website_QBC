@@ -77,7 +77,6 @@ export default function Reviews() {
       await submitReview(values.get('productId'), {
         displayName: values.get('displayName'),
         rating: values.get('rating'),
-        title: values.get('title'),
         text: values.get('text'),
       }, imageFile);
       toast.success('Thanks! Your review has been submitted for approval.');
@@ -106,10 +105,9 @@ export default function Reviews() {
             {reviews.map((review) => <article className="rounded-2xl border border-zinc-200 bg-white p-5" key={review._id}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div><h3 className="font-black">{review.displayName}</h3><RatingStars rating={review.rating} small /></div>
-                <time className="text-xs text-zinc-400">{formatDate(review.createdAt)}</time>
+                <time className="text-xs text-zinc-400">{formatDate(review.reviewDate || review.createdAt)}</time>
               </div>
               {review.product && <Link className="mt-3 inline-block text-sm font-bold text-zinc-600 hover:text-zinc-950" to={`/products/${review.product.slug}`}>{review.product.name}</Link>}
-              <h4 className="mt-3 font-bold">{review.title}</h4>
               <p className="mt-1 whitespace-pre-line text-sm leading-6 text-zinc-600">{review.text}</p>
               {review.imageUrl && <img className="mt-4 max-h-72 w-full rounded-xl object-cover sm:w-auto sm:max-w-full" src={getReviewImageUrl(review.imageUrl)} alt={`Product photo shared by ${review.displayName}`} loading="lazy" />}
               {review.verifiedPurchase && <span className="mt-3 inline-block text-xs font-bold text-green-700">Verified purchase</span>}
@@ -125,7 +123,6 @@ export default function Reviews() {
           <label className="field">Bicycle<select className="input" name="productId" defaultValue="" required><option value="" disabled>Select a bicycle</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
           <label className="field">Your name<input className="input" name="displayName" minLength="2" maxLength="80" required /></label>
           <label className="field">Rating<select className="input" name="rating" defaultValue="5" required>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} star{rating !== 1 ? 's' : ''}</option>)}</select></label>
-          <label className="field">Review title<input className="input" name="title" minLength="2" maxLength="160" required /></label>
           <label className="field">Your review<textarea className="input min-h-28" name="text" minLength="5" maxLength="3000" required /></label>
           <label className="field">Product photo <span className="font-normal text-zinc-500">Optional · JPG, up to 5 MB</span>
             <span className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-300 p-3 text-sm font-bold"><ImagePlus className="h-5 w-5 shrink-0" /><input className="min-w-0 text-sm font-normal" type="file" accept=".jpg,.jpeg,image/jpeg" onChange={(event) => chooseImage(event.target.files?.[0])} /></span>

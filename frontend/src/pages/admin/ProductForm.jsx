@@ -136,23 +136,6 @@ export default function ProductForm() {
         <label className="field">Sale price (optional)<input className="input" type="number" min="0" {...register('salePrice')} /></label>
         <label className="field">Stock quantity<input className="input" type="number" min="0" {...register('stockQuantity', { required: true })} /></label>
         <label className="field md:col-span-2">Description<textarea className="input min-h-32" {...register('description', { required: 'Description is required', minLength: { value: 10, message: 'Use at least 10 characters' } })} />{errors.description && <small>{errors.description.message}</small>}</label>
-        <div className="field md:col-span-2">
-          <span>Product images <span className="font-normal text-zinc-400">(JPEG, JPG, or PNG · up to 50 MB each · maximum 12 images)</span></span>
-          <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-zinc-300 p-4 text-sm font-bold hover:border-zinc-600">
-            <ImagePlus className="h-5 w-5" />Choose product images
-            <input className="sr-only" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple onChange={chooseImages} />
-          </label>
-          {(existingImages.length > 0 || selectedPreviews.length > 0) && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {existingImages.map((imageUrl, index) => <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100" key={imageUrl}>
-              <img className="h-full w-full object-cover" src={getProductImageUrl(imageUrl)} alt={`Product image ${index + 1}`} />
-              <button className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-900 shadow" type="button" aria-label={`Remove product image ${index + 1}`} onClick={() => setExistingImages((images) => images.filter((item) => item !== imageUrl))}><X className="h-4 w-4" /></button>
-            </div>)}
-            {selectedPreviews.map(({ file, url }, index) => <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100" key={`${file.name}-${file.lastModified}-${index}`}>
-              <img className="h-full w-full object-cover" src={url} alt={`New product image ${existingImages.length + index + 1}`} />
-              <button className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-900 shadow" type="button" aria-label={`Remove selected product image ${index + 1}`} onClick={() => setSelectedImages((images) => images.filter((item) => item !== file))}><X className="h-4 w-4" /></button>
-            </div>)}
-          </div>}
-        </div>
         <label className="field">Available sizes <span className="font-normal text-zinc-400">(one per line)</span><textarea className="input min-h-24" {...register('sizes')} /></label>
         <label className="field">Colours <span className="font-normal text-zinc-400">(one per line)</span><textarea className="input min-h-24" {...register('colors')} /></label>
         <fieldset className="grid gap-4 md:col-span-2">
@@ -171,6 +154,23 @@ export default function ProductForm() {
       <div className="mt-6 flex flex-wrap gap-5">
         <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" {...register('isAvailable')} />Available for sale</label>
         <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" {...register('isFeatured')} />Featured product</label>
+      </div>
+      <div className="field mt-6">
+        <span>Product images <span className="font-normal text-zinc-400">(JPEG, JPG, or PNG · up to 50 MB each · maximum 12 images)</span></span>
+        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-zinc-300 p-4 text-sm font-bold hover:border-zinc-600">
+          <ImagePlus className="h-5 w-5" />Choose product images
+          <input className="sr-only" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple onChange={chooseImages} />
+        </label>
+        {(existingImages.length > 0 || selectedPreviews.length > 0) && <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {existingImages.map((imageUrl, index) => <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100" key={imageUrl}>
+            <img className="h-full w-full object-cover" src={getProductImageUrl(imageUrl)} alt={`Product image ${index + 1}`} />
+            <button className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-900 shadow" type="button" aria-label={`Remove product image ${index + 1}`} onClick={() => setExistingImages((images) => images.filter((item) => item !== imageUrl))}><X className="h-4 w-4" /></button>
+          </div>)}
+          {selectedPreviews.map(({ file, url }, index) => <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100" key={`${file.name}-${file.lastModified}-${index}`}>
+            <img className="h-full w-full object-cover" src={url} alt={`New product image ${existingImages.length + index + 1}`} />
+            <button className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-900 shadow" type="button" aria-label={`Remove selected product image ${index + 1}`} onClick={() => setSelectedImages((images) => images.filter((item) => item !== file))}><X className="h-4 w-4" /></button>
+          </div>)}
+        </div>}
       </div>
       <button disabled={isSubmitting} className="btn-primary mt-7">{isSubmitting ? 'Saving…' : 'Save product'}</button>
     </form>

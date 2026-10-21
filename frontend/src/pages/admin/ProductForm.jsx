@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus, Plus, X } from 'lucide-react';
 import { createProduct, getAdminProducts, getProductImageUrl, updateProduct } from '../../services/product.service';
 import { getAdminCategories } from '../../services/category.service';
 import LoadingSpinner from '../../Components/LoadingSpinner';
 
 const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const split = (value) => value.split('\n').map((line) => line.trim()).filter(Boolean);
-const specifications = (value) => Object.fromEntries(value.split('\n').map((line) => line.split(':')).filter(([key, text]) => key?.trim() && text?.trim()).map(([key, ...text]) => [key.trim(), text.join(':').trim()]));
+const emptySpecifications = () => Array.from({ length: 10 }, () => ({ name: '', value: '' }));
 const acceptedImage = (file) => ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
 
 export default function ProductForm() {
@@ -21,25 +21,33 @@ export default function ProductForm() {
   const [existingImages, setExistingImages] = useState([]);
   const [selectedImages, setSelectedImages] = useState([]);
   const [selectedPreviews, setSelectedPreviews] = useState([]);
+  const [specificationRows, setSpecificationRows] = useState(emptySpecifications);
 
   useEffect(() => {
     Promise.all([getAdminCategories(), editing ? getAdminProducts({ limit: 100 }) : Promise.resolve(null)])
       .then(([categoryResponse, productResponse]) => {
         setCategories(categoryResponse.data.categories);
-        if (!productResponse) return;
+        if (!productResponse) {
+          setSpecificationRows(emptySpecifications());
+          return;
+        }
         const product = productResponse.data.products.find((item) => item._id === id);
         if (!product) {
           toast.error('Product not found');
           return;
         }
         setExistingImages(product.images || []);
+        const productSpecifications = Object.entries(product.specifications || {}).map(([name, value]) => ({ name, value }));
+        setSpecificationRows([
+          ...productSpecifications,
+          ...Array.from({ length: Math.max(0, 10 - productSpecifications.length) }, () => ({ name: '', value: '' })),
+        ]);
         reset({
           ...product,
           category: product.category?._id || product.category,
           salePrice: product.salePrice ?? '',
           sizes: product.sizes?.join('\n') || '',
           colors: product.colors?.join('\n') || '',
-          specifications: Object.entries(product.specifications || {}).map(([key, value]) => `${key}: ${value}`).join('\n'),
         });
       })
       .catch((error) => toast.error(error.message));
@@ -71,6 +79,24 @@ export default function ProductForm() {
   };
 
   const submit = async (values) => {
+    const specifications = {};
+    const specificationNames = new Set();
+    for (const [index, row] of specificationRows.entries()) {
+      const name = row.name.trim();
+      const value = row.value.trim();
+      if (!name && !value) continue;
+      if (!name || !value) {
+        toast.error(`Complete both the name and value for specification ${index + 1}.`);
+        return;
+      }
+      const normalizedName = name.toLocaleLowerCase();
+      if (specificationNames.has(normalizedName)) {
+        toast.error(`Specification name "${name}" is entered more than once.`);
+        return;
+      }
+      specificationNames.add(normalizedName);
+      specifications[name] = value;
+    }
     const payload = {
       ...values,
       slug: values.slug || slugify(values.name),
@@ -81,7 +107,7 @@ export default function ProductForm() {
       productImages: selectedImages,
       sizes: split(values.sizes),
       colors: split(values.colors),
-      specifications: specifications(values.specifications),
+      specifications,
     };
     try {
       if (editing) await updateProduct(id, payload);
@@ -129,7 +155,18 @@ export default function ProductForm() {
         </div>
         <label className="field">Available sizes <span className="font-normal text-zinc-400">(one per line)</span><textarea className="input min-h-24" {...register('sizes')} /></label>
         <label className="field">Colours <span className="font-normal text-zinc-400">(one per line)</span><textarea className="input min-h-24" {...register('colors')} /></label>
-        <label className="field md:col-span-2">Specifications <span className="font-normal text-zinc-400">(one `Name: value` per line)</span><textarea className="input min-h-28" {...register('specifications')} /></label>
+        <fieldset className="grid gap-4 md:col-span-2">
+          <legend className="field">Specifications <span className="font-normal text-zinc-400">Enter a name and value for each specification. Leave unused rows blank.</span></legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {specificationRows.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 p-3 sm:grid-cols-2" key={index}>
+              <label className="field">Name {index + 1}<input className="input" maxLength="80" value={row.name} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /></label>
+              <label className="field">Value {index + 1}<input className="input" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+            </div>)}
+          </div>
+          <button type="button" className="btn-secondary w-fit" onClick={() => setSpecificationRows((rows) => [...rows, ...Array.from({ length: 10 }, () => ({ name: '', value: '' }))])}>
+            <Plus className="h-4 w-4" />Add 10 more specifications
+          </button>
+        </fieldset>
       </div>
       <div className="mt-6 flex flex-wrap gap-5">
         <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" {...register('isAvailable')} />Available for sale</label>

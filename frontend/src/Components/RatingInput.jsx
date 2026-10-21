@@ -2,18 +2,20 @@ import { useState } from 'react';
 import { Star } from 'lucide-react';
 
 export default function RatingInput({ value = 5, onChange, name = 'rating' }) {
-  const [preview, setPreview] = useState(null);
+  const [previewProgress, setPreviewProgress] = useState(null);
   const [focusRating, setFocusRating] = useState(null);
-  const displayedRating = preview !== null
-    ? preview
+  const displayedRating = previewProgress !== null
+    ? previewProgress
     : focusRating !== null
       ? focusRating
       : Number(value) || 0;
 
   const selectRating = (rating) => {
     onChange(rating);
-    setPreview(null);
+    setPreviewProgress(null);
   };
+
+  const previewStar = (rating) => setPreviewProgress(rating);
 
   const handleKeyDown = (event, rating) => {
     let nextRating;
@@ -31,47 +33,47 @@ export default function RatingInput({ value = 5, onChange, name = 'rating' }) {
   const labels = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'];
 
   return (
-    <div>
+    <div className="relative w-fit">
       <input type="hidden" name={name} value={value} />
       <div
         role="radiogroup"
         aria-label="Rate your experience from 1 to 5 stars"
         className="flex w-fit items-center gap-1"
-        onMouseLeave={() => setPreview(null)}
+        onPointerLeave={() => setPreviewProgress(null)}
         onBlur={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget)) setFocusRating(null);
         }}
       >
-        {[1, 2, 3, 4, 5].map((rating) => (
+        {[1, 2, 3, 4, 5].map((rating) => {
+          const filled = rating <= displayedRating;
+          return (
           <button
             key={rating}
             type="button"
             role="radio"
             aria-checked={Number(value) === rating}
             aria-label={`${rating} star${rating === 1 ? '' : 's'} - ${labels[rating]}`}
-            title={`${rating} star${rating === 1 ? '' : 's'} - ${labels[rating]}`}
             data-rating={rating}
             tabIndex={Number(value) === rating ? 0 : -1}
-            onMouseEnter={() => setPreview(rating)}
+            onPointerEnter={() => previewStar(rating)}
             onFocus={() => setFocusRating(rating)}
             onClick={() => selectRating(rating)}
             onKeyDown={(event) => handleKeyDown(event, rating)}
-            className="group rounded-lg p-1 transition-transform duration-150 hover:scale-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
+            className="group relative rounded-md p-0.5 transition-transform duration-150 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500"
           >
-            <Star
-              aria-hidden="true"
-              className={`h-8 w-8 transition-colors duration-150 ${
-                rating <= displayedRating
-                  ? 'fill-amber-400 text-amber-500 drop-shadow-sm'
-                  : 'fill-zinc-100 text-zinc-300 group-hover:text-amber-300'
-              }`}
-            />
+            <span className="relative block h-5 w-5 sm:h-6 sm:w-6">
+              <Star aria-hidden="true" className="absolute inset-0 h-full w-full fill-zinc-100 text-zinc-300" />
+              {filled && <Star aria-hidden="true" className="absolute inset-0 h-full w-full fill-amber-400 text-amber-500" />}
+            </span>
           </button>
-        ))}
+          );
+        })}
       </div>
-      <p className="mt-1 min-h-5 text-sm font-semibold text-zinc-700" aria-live="polite">
-        {displayedRating > 0 ? `${displayedRating} out of 5 stars · ${labels[displayedRating]}` : 'Select a rating'}
-      </p>
+      <span className="sr-only" aria-live="polite">
+        {displayedRating > 0
+          ? `${Number(displayedRating.toFixed(1))} out of 5 stars, ${labels[Math.round(displayedRating)]}`
+          : 'Select a rating'}
+      </span>
     </div>
   );
 }

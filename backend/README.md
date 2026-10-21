@@ -44,7 +44,7 @@ There is deliberately no registration endpoint. Put the three `ADMIN_*` values i
 npm run seed:admin
 ```
 
-The script is idempotent: if that email exists, it changes nothing. Remove `ADMIN_PASSWORD` from deployment secrets after bootstrap if it is not otherwise needed.
+The script is idempotent: if that email exists, it changes nothing by default. If an existing admin needs a password reset, set `ADMIN_NAME`, `ADMIN_EMAIL`, and a new `ADMIN_PASSWORD` in the deployment environment, then explicitly run `npm run seed:admin -- --reset-password` from the backend directory (Render Shell). The reset uses the existing admin account with that email and hashes the password using the normal model hook. Remove `ADMIN_PASSWORD` from deployment secrets after bootstrap/reset if it is not otherwise needed.
 
 ## Authentication and client security
 

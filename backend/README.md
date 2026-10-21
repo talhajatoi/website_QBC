@@ -25,6 +25,7 @@ For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HT
 | `MONGODB_URI` | Required MongoDB connection URI. |
 | `JWT_SECRET` | Required secret of at least 32 characters; generate it with a password manager. |
 | `JWT_EXPIRES_IN` | Admin bearer-token lifetime, e.g. `15m`. |
+| `UPLOADS_DIR` | Optional absolute directory for product/review uploads. On Render, mount a persistent disk at `/var/data` and set this to `/var/data/uploads`; without a persistent disk, uploaded files may be lost when the service restarts or redeploys. |
 | `ALLOWED_ORIGINS` | Optional comma-separated additional frontend origins for CORS; use origin only, without a path. The two quettabikesclub.com production origins are included automatically. When set, this is authoritative. |
 | `FRONTEND_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
 | `CLIENT_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
@@ -35,6 +36,10 @@ For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HT
 | `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by the initial-admin seed script. Password must be at least 12 characters. |
 
 Never commit `.env`. `WHATSAPP_BUSINESS_NUMBER` is the only external service configuration currently needed. Product image fields accept HTTPS URLs; configure a cloud image host/CDN separately before a frontend upload feature is added.
+
+### Persistent image uploads on Render
+
+Product and review image files are written to the local filesystem. To keep them across deploys, attach a persistent disk to the backend Render web service with mount path `/var/data`, then set `UPLOADS_DIR=/var/data/uploads` in that service's environment and redeploy. The backend creates the directory and its `products` and `reviews` subdirectories automatically. Existing database image paths do not contain the image bytes: if an old image URL returns 404, that file is already missing and must be uploaded again after persistent storage is configured. A persistent disk preserves files across redeploys of the same service, but it is not a substitute for backups.
 
 ## First administrator
 

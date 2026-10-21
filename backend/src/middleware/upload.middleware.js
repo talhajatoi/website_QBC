@@ -4,10 +4,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import { fileTypeFromFile } from 'file-type';
+import { env } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
 
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
-export const uploadsDirectory = path.resolve(sourceDirectory, '../../uploads');
+export const uploadsDirectory = path.resolve(
+  env.UPLOADS_DIR || path.resolve(sourceDirectory, '../../uploads'),
+);
 const reviewDirectory = path.join(uploadsDirectory, 'reviews');
 const productDirectory = path.join(uploadsDirectory, 'products');
 fs.mkdirSync(reviewDirectory, { recursive: true });

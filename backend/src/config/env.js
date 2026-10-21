@@ -16,6 +16,7 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   JWT_EXPIRES_IN: z.string().default("15m"),
+  UPLOADS_DIR: z.string().trim().min(1).optional(),
   ALLOWED_ORIGINS: z.string().optional(),
   FRONTEND_URL: z.string().optional(),
   CLIENT_URL: z.string().optional(),

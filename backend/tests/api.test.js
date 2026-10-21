@@ -41,6 +41,43 @@ describe('platform basics and authentication', () => {
   it('surfaces a database connection failure and can reconnect to the isolated database', async () => { await disconnectDatabase(); await expect(connectDatabase('mongodb://127.0.0.1:1/unreachable', { serverSelectionTimeoutMS: 100 })).rejects.toThrow(); await connectDatabase(process.env.MONGODB_URI); expect(mongoose.connection.readyState).toBe(1); });
   it('rejects invalid credentials and blocks anonymous admin calls', async () => { const invalid = await request(app).post('/api/auth/login').send({ email: adminCredentials.email, password: 'wrong' }); const denied = await request(app).get('/api/admin/products'); expect(invalid.status).toBe(401); expect(invalid.body.message).toBe('Invalid email or password'); expect(denied.status).toBe(401); });
   it('validates requests and returns centralized missing-route errors', async () => { const invalid = await request(app).post('/api/admin/products').set(authHeader(token)).send({ name: 'x' }); const missing = await request(app).get('/api/nope'); expect(invalid.status).toBe(422); expect(missing.status).toBe(404); });
+  it('provides authenticated dashboard sales, order-status, and review metrics', async () => {
+    const category = await createCategory();
+    const product = await createProduct(category);
+    const orderData = {
+      orderNumber: 'QB-2026-DASH001',
+      accessTokenHash: 'b'.repeat(64),
+      customer: { name: 'Test Buyer', whatsapp: '923001234567', address: 'A sufficiently descriptive test address' },
+      items: [{ product: product._id, name: product.name, sku: product.sku, quantity: 1, unitPrice: 3000, lineTotal: 3000, selectedOptions: {} }],
+      subtotal: 3000,
+      deliveryCharge: 250,
+      grandTotal: 3250,
+    };
+    await Order.create({ ...orderData, status: 'delivered' });
+    await Order.create({ ...orderData, orderNumber: 'QB-2026-DASH002', accessTokenHash: 'c'.repeat(64), status: 'pending_confirmation' });
+    await Order.create({ ...orderData, orderNumber: 'QB-2026-DASH003', accessTokenHash: 'd'.repeat(64), status: 'cancelled' });
+    await Review.create({ product: product._id, displayName: 'Published Buyer', rating: 4, text: 'A great bicycle for daily rides.', status: 'published' });
+    await Review.create({ product: product._id, displayName: 'Pending Buyer', rating: 2, text: 'This review is awaiting moderation.', status: 'hidden' });
+    await Review.create({ product: product._id, displayName: 'Demo Buyer', rating: 5, text: 'Demo-only review content.', status: 'published', isDemo: true });
+
+    const denied = await request(app).get('/api/admin/dashboard');
+    const response = await request(app).get('/api/admin/dashboard').set(authHeader(token));
+    expect(denied.status).toBe(401);
+    expect(response.status).toBe(200);
+    expect(response.body.data.products).toBe(1);
+    expect(response.body.data.pendingOrders).toBe(1);
+    expect(response.body.data.sales).toEqual({ deliveredRevenue: 3250, deliveredOrders: 1 });
+    expect(response.body.data.ordersByStatus).toEqual({
+      pending_confirmation: 1,
+      confirmed: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 1,
+      cancelled: 1,
+      failed: 0,
+    });
+    expect(response.body.data.reviews).toEqual({ total: 2, pending: 1, published: 1, averageRating: 4 });
+  });
 });
 
 describe('catalogue and review management', () => {

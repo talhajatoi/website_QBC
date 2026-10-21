@@ -9,7 +9,7 @@ import LoadingSpinner from '../../Components/LoadingSpinner';
 
 const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const split = (value) => value.split('\n').map((line) => line.trim()).filter(Boolean);
-const emptySpecifications = () => Array.from({ length: 10 }, () => ({ name: '', value: '' }));
+const emptySpecifications = () => Array.from({ length: 6 }, () => ({ name: '', value: '' }));
 const acceptedImage = (file) => ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
 
 export default function ProductForm() {
@@ -40,7 +40,7 @@ export default function ProductForm() {
         const productSpecifications = Object.entries(product.specifications || {}).map(([name, value]) => ({ name, value }));
         setSpecificationRows([
           ...productSpecifications,
-          ...Array.from({ length: Math.max(0, 10 - productSpecifications.length) }, () => ({ name: '', value: '' })),
+          ...Array.from({ length: Math.max(0, 6 - productSpecifications.length) }, () => ({ name: '', value: '' })),
         ]);
         reset({
           ...product,
@@ -138,16 +138,17 @@ export default function ProductForm() {
         <label className="field md:col-span-2">Description<textarea className="input min-h-32" {...register('description', { required: 'Description is required', minLength: { value: 10, message: 'Use at least 10 characters' } })} />{errors.description && <small>{errors.description.message}</small>}</label>
         <label className="field">Available sizes <span className="font-normal text-zinc-400">(one per line)</span><textarea className="input min-h-24" {...register('sizes')} /></label>
         <label className="field">Colours <span className="font-normal text-zinc-400">(one per line)</span><textarea className="input min-h-24" {...register('colors')} /></label>
-        <fieldset className="grid gap-4 md:col-span-2">
-          <legend className="field">Specifications <span className="font-normal text-zinc-400">Enter a name and value for each specification. Leave unused rows blank.</span></legend>
+        <fieldset className="min-w-0 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:col-span-2 sm:p-5">
+          <legend className="px-2 text-sm font-bold text-zinc-900">Specifications</legend>
+          <p className="mb-4 text-sm text-zinc-500">Add a name and value for each detail. Leave unused rows blank.</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {specificationRows.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 p-3 sm:grid-cols-2" key={index}>
-              <label className="field">Name {index + 1}<input className="input" maxLength="80" value={row.name} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /></label>
-              <label className="field">Value {index + 1}<input className="input" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+            {specificationRows.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-2" key={index}>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Specification {index + 1} · Name</span><input className="input" placeholder="e.g. Frame material" maxLength="80" value={row.name} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /></label>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="e.g. Aluminum" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
             </div>)}
           </div>
-          <button type="button" className="btn-secondary w-fit" onClick={() => setSpecificationRows((rows) => [...rows, ...Array.from({ length: 10 }, () => ({ name: '', value: '' }))])}>
-            <Plus className="h-4 w-4" />Add 10 more specifications
+          <button type="button" className="btn-secondary mt-4 w-fit" onClick={() => setSpecificationRows((rows) => [...rows, ...Array.from({ length: 6 }, () => ({ name: '', value: '' }))])}>
+            <Plus className="h-4 w-4" />Add 6 more specifications
           </button>
         </fieldset>
       </div>

@@ -55,6 +55,45 @@ describe('platform basics and authentication', () => {
   });
   it('surfaces a database connection failure and can reconnect to the isolated database', async () => { await disconnectDatabase(); await expect(connectDatabase('mongodb://127.0.0.1:1/unreachable', { serverSelectionTimeoutMS: 100 })).rejects.toThrow(); await connectDatabase(process.env.MONGODB_URI); expect(mongoose.connection.readyState).toBe(1); });
   it('rejects invalid credentials and blocks anonymous admin calls', async () => { const invalid = await request(app).post('/api/auth/login').send({ email: adminCredentials.email, password: 'wrong' }); const denied = await request(app).get('/api/admin/products'); expect(invalid.status).toBe(401); expect(invalid.body.message).toBe('Invalid email or password'); expect(denied.status).toBe(401); });
+  it('serves public store details and protects store-setting updates', async () => {
+    const initial = await request(app).get('/api/business');
+    expect(initial.status).toBe(200);
+    expect(initial.body.data.business.whatsappNumber).toBe('923001234567');
+    expect(initial.body.data.business).not.toHaveProperty('adminEmail');
+
+    const settings = {
+      storeName: 'Quetta Cycles',
+      whatsappNumber: '+92 300 1234567',
+      contactPhone: '081-123456',
+      contactEmail: 'hello@example.com',
+      address: 'Quetta, Pakistan',
+      socialLinks: {
+        facebook: 'https://facebook.com/example',
+        instagram: '',
+        tiktok: '',
+        youtube: '',
+      },
+    };
+    const denied = await request(app).patch('/api/admin/business').send(settings);
+    expect(denied.status).toBe(401);
+
+    const updated = await request(app).patch('/api/admin/business').set(authHeader(token)).send(settings);
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.business).toMatchObject({
+      ...settings,
+      whatsappNumber: '923001234567',
+    });
+    expect((await request(app).get('/api/business')).body.data.business.storeName).toBe('Quetta Cycles');
+  });
+  it('updates administrator name and email only after password confirmation', async () => {
+    const profile = { name: 'Store Manager', email: 'manager@example.com', currentPassword: adminCredentials.password };
+    const rejected = await request(app).patch('/api/auth/me').set(authHeader(token)).send({ ...profile, currentPassword: 'wrong' });
+    expect(rejected.status).toBe(401);
+    const updated = await request(app).patch('/api/auth/me').set(authHeader(token)).send(profile);
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.admin).toMatchObject({ name: profile.name, email: profile.email });
+    expect(updated.body.data.admin).not.toHaveProperty('password');
+  });
   it('validates requests and returns centralized missing-route errors', async () => { const invalid = await request(app).post('/api/admin/products').set(authHeader(token)).send({ name: 'x' }); const missing = await request(app).get('/api/nope'); expect(invalid.status).toBe(422); expect(missing.status).toBe(404); });
   it('provides authenticated dashboard sales, order-status, and review metrics', async () => {
     const category = await createCategory();

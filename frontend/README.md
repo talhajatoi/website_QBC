@@ -27,7 +27,8 @@ npm run lint
 | Variable | Purpose |
 | --- | --- |
 | `VITE_API_URL` | Public API base URL, including `/api`; defaults to localhost in development and the deployed backend in production. |
-| `VITE_STORE_NAME` | Optional display label for future branding use. |
+
+Business name and public contact details are managed from **Admin → Settings → Public store details** and stored in MongoDB. They are loaded from the backend's public `GET /api/business` endpoint; changing these values does not require a frontend rebuild. Keep passwords, database URIs, and signing secrets out of frontend variables.
 
 Do not put MongoDB URIs, JWT signing secrets, admin passwords, or other private credentials in frontend variables.
 
@@ -54,10 +55,10 @@ Save the rule and redeploy the frontend. Render applies rewrite rules from the d
 - A created order returns an opaque order-access token and WhatsApp draft URL. They are stored only in the active browser session, so order tracking cannot be opened from another device without a future secure sharing design.
 - Checkout always submits item IDs/options and quantities only. The backend recalculates stock and pricing.
 
-## Intentional backend limitations reflected honestly in the UI
+## Current backend behavior reflected in the UI
 
 - The dashboard currently shows only total products and pending orders because those are the only fields supplied by `GET /api/admin/dashboard`.
 - Product images are URL inputs: the backend has no upload endpoint or cloud-media integration.
 - Backend order listing supports status and pagination but not text/customer/payment-status search, so the UI does not fake those filters.
-- The settings screen offers password changes only; other store settings do not have backend endpoints.
+- Admin Settings can edit public store details and private admin contact credentials; payment account details remain backend environment settings.
 - Meta Pixel is not included because no consent policy or pixel configuration has been supplied.

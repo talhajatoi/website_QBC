@@ -13,6 +13,7 @@ import cartRoutes from "./routes/cart.route.js";
 import orderRoutes from "./routes/order.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import paymentRoutes from "./routes/payment.route.js";
+import businessSettingsRoutes from "./routes/business-settings.route.js";
 import { uploadsDirectory } from "./middleware/upload.middleware.js";
 
 const app = express();
@@ -61,6 +62,7 @@ app.get("/api/health", (req, res) =>
     data: { status: "ok" },
   }),
 );
+app.use("/api/business", businessSettingsRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);

@@ -9,7 +9,9 @@ import AnimatedBikeHero from "../Components/AnimatedBikeHero";
 import CategoryShowcase from "../Components/CategoryShowcase";
 import LoadingSpinner from "../Components/LoadingSpinner";
 import EmptyState from "../Components/EmptyState";
+import { useBusiness } from "../hooks/useBusiness";
 export default function Home() {
+  const { business } = useBusiness();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function Home() {
             transition={{ duration: 0.55 }}
           >
             <p className="mb-4 text-sm font-black tracking-[.2em] text-brand">
-              QUETTA, PAKISTAN
+              {business.address || "BUILT FOR EVERY JOURNEY"}
             </p>
             <h1 className="font-display text-[clamp(2.5rem,9vw,4.5rem)] font-black leading-none sm:text-7xl">
               RIDE YOUR WAY.
@@ -42,7 +44,7 @@ export default function Home() {
               <span className="text-brand">OWN THE ROAD.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-8 text-zinc-300">
-              Find your next ride with Quetta Bikes Club. Quality bicycles built
+              Find your next ride with {business.storeName}. Quality bicycles built
               for everyday journeys and weekend adventures.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">

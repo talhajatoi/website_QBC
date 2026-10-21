@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Boxes, FolderTree, LayoutDashboard, LogOut, MessageSquare, ReceiptText, Settings } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useBusiness } from '../hooks/useBusiness';
 
 const links = [
   [LayoutDashboard, 'Dashboard', '/admin/dashboard'],
@@ -13,6 +14,7 @@ const links = [
 
 export default function AdminLayout() {
   const { admin, signOut } = useAuth();
+  const { business } = useBusiness();
   const nav = useNavigate();
   const exit = async () => {
     await signOut();
@@ -23,7 +25,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-zinc-100 md:grid md:grid-cols-[250px_1fr]">
       <aside className="bg-zinc-950 px-5 py-6 text-white">
         <NavLink to="/" className="font-display text-xl font-black">
-          QUETTA <span className="text-brand">BICYCLES</span>
+          {business.storeName || 'Store'}
         </NavLink>
         <p className="mt-2 text-xs text-zinc-400">Administrator workspace</p>
         <nav className="mt-8 flex gap-1 overflow-x-auto md:block">

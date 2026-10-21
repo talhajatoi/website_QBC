@@ -36,6 +36,11 @@ export function AuthProvider({ children }) {
       setAdmin(null);
     }
   };
+  const updateProfile = async (data) => {
+    const response = await auth.updateProfile(data);
+    setAdmin(response.data.admin);
+    return response;
+  };
   return (
     <AuthContext.Provider
       value={{
@@ -43,6 +48,7 @@ export function AuthProvider({ children }) {
         loading,
         signIn,
         signOut,
+        updateProfile,
         changePassword: auth.changePassword,
       }}
     >

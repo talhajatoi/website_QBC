@@ -30,12 +30,14 @@ For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HT
 | `FRONTEND_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
 | `CLIENT_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
 | `DNS_SERVERS` | Optional comma-separated DNS resolvers when a network blocks Node SRV lookups for `mongodb+srv` URIs. |
-| `WHATSAPP_BUSINESS_NUMBER` | Required for checkout; international digits only, no `+` or spaces. |
+| `WHATSAPP_BUSINESS_NUMBER` | Initial default for the store's WhatsApp contact when the business settings record is first created; international digits only. After setup, change it in **Admin → Settings → Public store details**. |
 | `DELIVERY_CHARGE_PKR` | Non-negative server-side delivery charge. |
 | `ENABLE_DEMO_CONTENT` | Set `true` only for a development demonstration. Demo reviews are otherwise hidden and never affect product totals. |
 | `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by the initial-admin seed script. Password must be at least 12 characters. |
 
-Never commit `.env`. `WHATSAPP_BUSINESS_NUMBER` is the only external service configuration currently needed. Product image fields accept HTTPS URLs; configure a cloud image host/CDN separately before a frontend upload feature is added.
+Public store name, WhatsApp number, public contact phone/email, address, and social URLs are kept in one MongoDB `BusinessSettings` record. Read public values at `GET /api/business`; authorized admins update them through `PATCH /api/admin/business` or the dashboard Settings page. Admin sign-in name/email are separate private account fields and can be changed in Settings after confirming the current password. Payment account details remain backend environment variables and are not part of public business settings.
+
+Never commit `.env`. Product image fields accept HTTPS URLs; configure a cloud image host/CDN separately before a frontend upload feature is added.
 
 ### Persistent image uploads on Render
 
@@ -64,10 +66,12 @@ Every response uses `{ success, message, data? }`; validation failures include a
 | Method | Endpoint | Access |
 | --- | --- | --- |
 | GET | `/api/health` | Public |
+| GET | `/api/business` | Public store name and contact details |
 | POST | `/api/auth/login` | Public, rate limited |
 | POST | `/api/auth/logout` | Admin bearer token |
 | GET | `/api/auth/me` | Admin bearer token |
 | PATCH | `/api/auth/password` | Admin bearer token |
+| PATCH | `/api/auth/me` | Admin bearer token; update account name/email with current password |
 | GET | `/api/categories` | Public |
 | GET | `/api/products` | Public; filters: `category`, `brand`, `bicycleType`, `available`, `minPrice`, `maxPrice`; sort: `price_asc`, `price_desc`, `newest`, `rating`, `popularity` |
 | GET | `/api/products/featured` | Public |
@@ -85,6 +89,7 @@ Every response uses `{ success, message, data? }`; validation failures include a
 | GET | `/api/orders/:orderNumber` | `X-Order-Access-Token` |
 | GET | `/api/admin/dashboard` | Admin bearer token |
 | GET / POST | `/api/admin/products` | Admin bearer token |
+| PATCH | `/api/admin/business` | Admin bearer token; update public store settings |
 | PATCH / DELETE | `/api/admin/products/:id` | Admin bearer token |
 | PATCH | `/api/admin/products/:id/stock` | Admin bearer token |
 | GET / POST | `/api/admin/categories` | Admin bearer token |

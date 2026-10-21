@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { dashboardSummary } from '../controllers/admin.controller.js';
+import { updateBusinessSettings } from '../controllers/business-settings.controller.js';
 import { createCategory, deleteCategory, listCategories, updateCategory } from '../controllers/category.controller.js';
 import { adminOrder, adminOrders, updateAdvancePaymentStatus, updateNotes, updateOrderStatus, updatePaymentStatus } from '../controllers/order.controller.js';
 import { createProduct, deleteProduct, listAdminProducts, updateProduct, updateStock } from '../controllers/product.controller.js';
@@ -14,6 +15,7 @@ import { productCreateSchema, productQuerySchema, productUpdateSchema, stockSche
 import { reviewCreateSchema, reviewQuerySchema, reviewUpdateSchema } from '../validators/review.validator.js';
 import { z } from 'zod';
 import { slug } from '../validators/common.js';
+import { businessSettingsSchema } from '../validators/business-settings.validator.js';
 const router = Router();
 const categorySchema = z.object({ name: z.string().trim().min(2).max(100), slug, description: z.string().trim().max(1000).optional(), imageUrl: z.string().url().max(2048).optional(), isActive: z.boolean().optional() });
 const validateReviewBody = (schema) => { const validateBody = validate(schema); return (req, res, next) => validateBody(req, res, (error) => { if (error && req.file) return removeUploadedFile(req.file).then(() => next(error), next); next(error); }); };
@@ -41,6 +43,7 @@ const validateProductForm = (schema) => {
 };
 router.use(requireAuth, requireAdmin);
 router.get('/dashboard', dashboardSummary);
+router.patch('/business', validate(businessSettingsSchema), updateBusinessSettings);
 router.get('/products', validate(productQuerySchema, 'query'), listAdminProducts);
 router.post('/products', ...uploadProductImages, parseProductForm, validateProductForm(productCreateSchema), createProduct);
 router.patch('/products/:id', ...uploadProductImages, parseProductForm, validateProductForm(productUpdateSchema), updateProduct);

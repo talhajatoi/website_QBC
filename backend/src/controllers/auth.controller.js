@@ -11,6 +11,14 @@ export const login = asyncHandler(async (req, res) => {
 });
 export const logout = (req, res) => res.json({ success: true, message: 'Logout successful. Discard the bearer token.' });
 export const profile = (req, res) => res.json({ success: true, message: 'Profile retrieved successfully', data: { admin: publicAdmin(req.admin) } });
+export const updateProfile = asyncHandler(async (req, res) => {
+  const admin = await Admin.findById(req.admin.id).select('+password');
+  if (!(await admin.comparePassword(req.body.currentPassword))) throw new ApiError(401, 'Current password is incorrect');
+  admin.name = req.body.name;
+  admin.email = req.body.email;
+  await admin.save();
+  res.json({ success: true, message: 'Administrator profile updated successfully', data: { admin: publicAdmin(admin) } });
+});
 export const changePassword = asyncHandler(async (req, res) => {
   const admin = await Admin.findById(req.admin.id).select('+password');
   if (!(await admin.comparePassword(req.body.currentPassword))) throw new ApiError(401, 'Current password is incorrect');

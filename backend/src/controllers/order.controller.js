@@ -4,7 +4,8 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { generateOrderNumber, generateSecret, hashSecret } from '../utils/generateOrderNumber.js';
 import { canTransition, makeOrderItemsAndReserveStock, releaseStock } from '../services/order.service.js';
-import { whatsappUrlForOrder } from '../services/whatsapp.service.js';
+import { whatsappNumberForBusiness, whatsappUrlForOrder } from '../services/whatsapp.service.js';
+import { getBusinessSettings } from '../services/business-settings.service.js';
 import { getBankTransferPaymentInstructions, getCodAdvancePaymentInstructions } from '../services/payment.service.js';
 import { env } from '../config/env.js';
 
@@ -13,6 +14,8 @@ export const createOrder = asyncHandler(async (req, res) => {
   if (idempotencyKey && !/^[A-Za-z0-9_-]{16,200}$/.test(idempotencyKey)) throw new ApiError(422, 'Invalid Idempotency-Key header');
   if (idempotencyKey && await Order.exists({ idempotencyKey })) throw new ApiError(409, 'This checkout request has already been processed');
   if (req.body.paymentMethod === 'bank_transfer' && !getBankTransferPaymentInstructions().length) throw new ApiError(503, 'Bank transfer payment details are not configured');
+  const businessSettings = await getBusinessSettings();
+  whatsappNumberForBusiness(businessSettings);
   const { items, reserved } = await makeOrderItemsAndReserveStock(req.body.items);
   try {
     const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
@@ -23,7 +26,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     const cashOnDeliveryAmount = isCashOnDelivery ? grandTotal - advancePaymentAmount : 0;
     const accessToken = generateSecret();
     const order = await Order.create({ orderNumber: generateOrderNumber(), accessTokenHash: hashSecret(accessToken), ...(idempotencyKey && { idempotencyKey }), customer: { ...req.body.customer, whatsapp: req.body.customer.whatsapp.replace(/[\s-]/g, '') }, items, subtotal, deliveryCharge, grandTotal, advancePaymentAmount, cashOnDeliveryAmount, advancePaymentStatus: isCashOnDelivery ? 'pending' : 'not_required', paymentStatus: isCashOnDelivery ? 'pending' : 'unpaid', paymentMethod: req.body.paymentMethod, customerNotes: req.body.customerNotes, attribution: req.body.attribution });
-    const whatsappUrl = whatsappUrlForOrder(order);
+    const whatsappUrl = whatsappUrlForOrder(order, businessSettings);
     order.whatsappLinkGeneratedAt = new Date(); await order.save();
     const paymentInstructions = isCashOnDelivery
       ? getCodAdvancePaymentInstructions()

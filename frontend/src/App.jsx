@@ -10,6 +10,8 @@ import { Toaster } from "react-hot-toast";
 import { lazy, Suspense, useEffect } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
+import { BusinessProvider } from "./context/BusinessContext";
+import { useBusiness } from "./hooks/useBusiness";
 import AnnouncementBar from "./Components/AnnouncementBar";
 import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
@@ -57,11 +59,13 @@ function PublicLayout() {
 }
 function PageTitle() {
   const location = useLocation();
+  const { business } = useBusiness();
+  const storeName = business.storeName || "Store";
   useEffect(() => {
     document.title = location.pathname.startsWith("/admin")
-      ? "Admin · Quetta Bikes Club"
-      : "Quetta Bikes Club";
-  }, [location.pathname]);
+      ? `Admin · ${storeName}`
+      : storeName;
+  }, [location.pathname, storeName]);
   return null;
 }
 function App() {
@@ -69,16 +73,17 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <PageTitle />
-          <ErrorBoundary>
-            <Suspense
-              fallback={
-                <div className="grid min-h-screen place-items-center text-sm font-bold">
-                  Loading workspace…
-                </div>
-              }
-            >
-              <Routes>
+          <BusinessProvider>
+            <PageTitle />
+            <ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div className="grid min-h-screen place-items-center text-sm font-bold">
+                    Loading workspace…
+                  </div>
+                }
+              >
+                <Routes>
                 <Route element={<PublicLayout />}>
                   <Route path="/" element={<Home />} />
                   <Route path="/products" element={<Products />} />
@@ -123,10 +128,11 @@ function App() {
                   <Route path="settings" element={<AdminSettings />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </ErrorBoundary>
-          <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
+            <Toaster position="top-right" toastOptions={{ duration: 3500 }} />
+          </BusinessProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

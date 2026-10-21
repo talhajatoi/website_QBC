@@ -14,7 +14,7 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HTTPS, a distinct long random JWT secret, and set `FRONTEND_URL` to the deployed frontend origin. Multiple origins can be comma-separated. The legacy `CLIENT_URL` is still accepted when `FRONTEND_URL` is unset. Start with `npm start` only after the deployment environment supplies all required values.
+For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HTTPS, and a distinct long random JWT secret. The backend always allows `https://quettabikesclub.com` and `https://www.quettabikesclub.com`; use `ALLOWED_ORIGINS` for any additional comma-separated frontend origins. The legacy `FRONTEND_URL` and `CLIENT_URL` settings are still accepted. Start with `npm start` only after the deployment environment supplies all required values.
 
 ## Environment
 
@@ -25,8 +25,9 @@ For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HT
 | `MONGODB_URI` | Required MongoDB connection URI. |
 | `JWT_SECRET` | Required secret of at least 32 characters; generate it with a password manager. |
 | `JWT_EXPIRES_IN` | Admin bearer-token lifetime, e.g. `15m`. |
-| `FRONTEND_URL` | Comma-separated frontend origin allowlist for CORS; use the public frontend origin without a path. Defaults to localhost in development. |
-| `CLIENT_URL` | Legacy CORS allowlist; used only when `FRONTEND_URL` is unset. |
+| `ALLOWED_ORIGINS` | Optional comma-separated additional frontend origins for CORS; use origin only, without a path. The two quettabikesclub.com production origins are included automatically. When set, this is authoritative. |
+| `FRONTEND_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
+| `CLIENT_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
 | `DNS_SERVERS` | Optional comma-separated DNS resolvers when a network blocks Node SRV lookups for `mongodb+srv` URIs. |
 | `WHATSAPP_BUSINESS_NUMBER` | Required for checkout; international digits only, no `+` or spaces. |
 | `DELIVERY_CHARGE_PKR` | Non-negative server-side delivery charge. |

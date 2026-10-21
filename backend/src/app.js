@@ -20,12 +20,21 @@ app.disable("x-powered-by");
 app.use(helmet());
 app.use(
   cors({
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Idempotency-Key",
+      "X-Cart-Token",
+      "X-Order-Access-Token",
+    ],
     origin(origin, callback) {
       if (!origin || env.allowedOrigins.includes(origin))
         return callback(null, true);
       return callback(new Error("Origin not allowed by CORS"));
     },
     credentials: false,
+    optionsSuccessStatus: 204,
   }),
 );
 app.use(express.json({ limit: "100kb" }));

@@ -16,6 +16,7 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1, "MONGODB_URI is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   JWT_EXPIRES_IN: z.string().default("15m"),
+  ALLOWED_ORIGINS: z.string().optional(),
   FRONTEND_URL: z.string().optional(),
   CLIENT_URL: z.string().optional(),
   DNS_SERVERS: z.string().optional(),
@@ -51,17 +52,57 @@ if (!parsed.success) {
   throw new Error(`Invalid environment configuration: ${errors}`);
 }
 
+const parseAllowedOrigins = (values) =>
+  values.flatMap((value) =>
+    (value || "")
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+      .map((origin) => {
+        let url;
+        try {
+          url = new URL(origin);
+        } catch {
+          throw new Error("Invalid CORS origin in ALLOWED_ORIGINS, FRONTEND_URL, or CLIENT_URL");
+        }
+        if (
+          !["http:", "https:"].includes(url.protocol) ||
+          url.username ||
+          url.password ||
+          url.pathname !== "/" ||
+          url.search ||
+          url.hash
+        ) {
+          throw new Error("CORS origins must be HTTP(S) origins without paths in ALLOWED_ORIGINS, FRONTEND_URL, or CLIENT_URL");
+        }
+        return url.origin;
+      }),
+  );
+
+const productionOrigins = [
+  "https://quettabikesclub.com",
+  "https://www.quettabikesclub.com",
+];
+const configuredOriginValues = parsed.data.ALLOWED_ORIGINS !== undefined
+  ? [parsed.data.ALLOWED_ORIGINS]
+  : [parsed.data.FRONTEND_URL, parsed.data.CLIENT_URL];
+const configuredOrigins = parseAllowedOrigins([
+  ...configuredOriginValues,
+]);
+
 export const env = Object.freeze({
   ...parsed.data,
   allowedOrigins: [
     ...new Set([
-      ...(parsed.data.FRONTEND_URL || parsed.data.CLIENT_URL || "")
-        .split(",")
-        .map((origin) => origin.trim())
-        .filter(Boolean),
+      ...productionOrigins,
+      ...configuredOrigins.filter(
+        (origin) =>
+          parsed.data.NODE_ENV !== "production" ||
+          !["localhost", "127.0.0.1", "[::1]"].includes(new URL(origin).hostname),
+      ),
       ...(parsed.data.NODE_ENV === "production"
         ? []
-        : ["http://localhost:5173", "http://127.0.0.1:5173", "https://qbc-backend-3nj4.onrender.com/api"]),
+        : ["http://localhost:5173", "http://127.0.0.1:5173"]),
     ]),
   ],
   dnsServers:

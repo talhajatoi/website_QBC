@@ -22,18 +22,33 @@ beforeEach(async () => { await mongoose.connection.db.dropDatabase(); await Admi
 afterAll(async () => { await disconnectDatabase(); await globalThis.mongoServer.stop(); });
 
 describe('platform basics and authentication', () => {
-  it('reports health and allows configured frontend and local origins through CORS', async () => {
+  it('reports health and allows only configured frontend origins through CORS preflight', async () => {
     const response = await request(app).get('/api/health');
     expect(response.status).toBe(200);
     expect(response.body.data.status).toBe('ok');
     expect(mongoose.connection.readyState).toBe(1);
-    const preflight = await request(app).options('/api/orders')
-      .set('Origin', 'https://store.example.com')
+    for (const origin of ['https://quettabikesclub.com', 'https://www.quettabikesclub.com', 'https://store.example.com']) {
+      const preflight = await request(app).options('/api/auth/login')
+        .set('Origin', origin)
+        .set('Access-Control-Request-Method', 'POST')
+        .set('Access-Control-Request-Headers', 'authorization,content-type');
+      expect(preflight.status).toBe(204);
+      expect(preflight.headers['access-control-allow-origin']).toBe(origin);
+      expect(preflight.headers['access-control-allow-methods']).toContain('POST');
+      expect(preflight.headers['access-control-allow-headers'].toLowerCase()).toContain('authorization');
+      expect(preflight.headers['access-control-allow-headers'].toLowerCase()).toContain('content-type');
+    }
+    const blockedPreflight = await request(app).options('/api/auth/login')
+      .set('Origin', 'https://untrusted.example')
       .set('Access-Control-Request-Method', 'POST')
-      .set('Access-Control-Request-Headers', 'authorization,content-type,x-cart-token,x-order-access-token');
-    expect(preflight.status).toBe(204);
-    expect(preflight.headers['access-control-allow-origin']).toBe('https://store.example.com');
-    expect(preflight.headers['access-control-allow-headers']).toContain('x-order-access-token');
+      .set('Access-Control-Request-Headers', 'content-type');
+    expect(blockedPreflight.headers['access-control-allow-origin']).toBeUndefined();
+
+    const login = await request(app).post('/api/auth/login')
+      .set('Origin', 'https://quettabikesclub.com')
+      .send({ email: adminCredentials.email, password: 'wrong' });
+    expect(login.status).toBe(401);
+    expect(login.headers['access-control-allow-origin']).toBe('https://quettabikesclub.com');
     const localCorsResponse = await request(app).get('/api/health').set('Origin', 'http://localhost:5173');
     expect(localCorsResponse.status).toBe(200);
     expect(localCorsResponse.headers['access-control-allow-origin']).toBe('http://localhost:5173');

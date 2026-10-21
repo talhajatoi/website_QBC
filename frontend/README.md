@@ -11,7 +11,7 @@ Copy-Item .env.example .env
 npm run dev
 ```
 
-The backend must be running on the URL set in `VITE_API_URL` (default: `http://localhost:5000/api`). Include the `/api` prefix; this project deliberately uses `/api`, not `/api/v1`.
+The backend must be running on the URL set in `VITE_API_URL` (defaults to `http://localhost:5000/api` in development and `https://qbc-backend-3nj4.onrender.com/api` in production). Include the `/api` prefix; this project deliberately uses `/api`, not `/api/v1`.
 
 ## Commands
 
@@ -26,14 +26,14 @@ npm run lint
 
 | Variable | Purpose |
 | --- | --- |
-| `VITE_API_URL` | Public API base URL, including `/api`; defaults to `http://localhost:5000/api`. |
+| `VITE_API_URL` | Public API base URL, including `/api`; defaults to localhost in development and the deployed backend in production. |
 | `VITE_STORE_NAME` | Optional display label for future branding use. |
 
 Do not put MongoDB URIs, JWT signing secrets, admin passwords, or other private credentials in frontend variables.
 
 ## Render deployment
 
-In the frontend Render service, add `VITE_API_URL` with the backend API URL, for example `https://your-backend.onrender.com/api`, then redeploy the frontend so Vite embeds the value in the production build. In the backend Render service, set `FRONTEND_URL` to the frontend's public origin only (for example `https://your-frontend.onrender.com`, without `/api` or a trailing slash). Add a comma-separated list if the site uses more than one origin.
+In the frontend Render service, set `VITE_API_URL` to `https://qbc-backend-3nj4.onrender.com/api`, then redeploy the frontend so Vite embeds the value in the production build. The backend allows `https://quettabikesclub.com` and `https://www.quettabikesclub.com` by default. For any other frontend origin, set `ALLOWED_ORIGINS` in the backend Render service to a comma-separated list of origins only (no `/api` path or trailing slash), then redeploy the backend.
 
 ### React Router refresh and direct links
 

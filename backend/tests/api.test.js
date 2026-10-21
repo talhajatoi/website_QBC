@@ -173,7 +173,7 @@ describe('catalogue and review management', () => {
     expect(removed.status).toBe(200);
     expect((await request(app).get(imagePaths[0])).status).toBe(404);
   });
-  it('publishes reviews, moderates customer submissions, and stores JPG photos without counting demo reviews', async () => {
+  it('publishes customer reviews immediately while allowing admin moderation and stores JPG photos without counting demo reviews', async () => {
     const category = await createCategory();
     const product = await createProduct(category);
     await Review.create({ product: product._id, displayName: 'Real Buyer', rating: 4, text: 'Solid bicycle for regular riding.', status: 'published' });
@@ -193,7 +193,7 @@ describe('catalogue and review management', () => {
     const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07]);
     const submitted = await request(app).post(`/api/products/${product.id}/reviews`).field('displayName', 'Rider One').field('rating', '5').field('title', 'Great bicycle').field('reviewDate', '2000-01-01').field('text', 'Comfortable and reliable ride.').attach('image', jpg, { filename: 'bike.jpg', contentType: 'image/jpeg' });
     expect(submitted.status).toBe(201);
-    expect(submitted.body.data.review.status).toBe('hidden');
+    expect(submitted.body.data.review.status).toBe('published');
     expect(submitted.body.data.review.verifiedPurchase).toBe(false);
     expect(submitted.body.data.review.reviewDate.slice(0, 10)).not.toBe('2000-01-01');
     expect(Object.hasOwn(submitted.body.data.review, 'title')).toBe(false);
@@ -201,8 +201,12 @@ describe('catalogue and review management', () => {
     const reviewImageResponse = await request(app).get(submitted.body.data.review.imageUrl);
     expect(reviewImageResponse.status).toBe(200);
     expect(reviewImageResponse.headers['cross-origin-resource-policy']).toBe('cross-origin');
-    expect((await request(app).get('/api/reviews')).body.data.reviews).toHaveLength(2);
+    expect((await request(app).get('/api/reviews')).body.data.reviews).toHaveLength(3);
     const reviewId = submitted.body.data.review._id;
+    const hidden = await request(app).patch(`/api/admin/reviews/${reviewId}`).set(authHeader(token)).send({ status: 'hidden' });
+    expect(hidden.status).toBe(200);
+    expect(hidden.body.data.review.status).toBe('hidden');
+    expect((await request(app).get('/api/reviews')).body.data.reviews).toHaveLength(2);
     const published = await request(app).patch(`/api/admin/reviews/${reviewId}`).set(authHeader(token)).field('status', 'published').field('reviewDate', '2023-12-25').attach('image', jpg, { filename: 'admin-bike.jpg', contentType: 'image/jpeg' });
     const publicReviews = await request(app).get('/api/reviews');
     const publishedReview = publicReviews.body.data.reviews.find((review) => review._id === reviewId);

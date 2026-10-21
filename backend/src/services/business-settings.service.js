@@ -1,4 +1,5 @@
 import { BusinessSettings } from '../models/business-settings.model.js';
+import { normalizeWhatsAppNumber } from '../utils/whatsapp-number.js';
 
 export const getBusinessSettings = async () =>
   (await BusinessSettings.findOne({ key: 'default' })) ||
@@ -6,7 +7,7 @@ export const getBusinessSettings = async () =>
 
 export const publicBusinessDetails = (settings) => ({
   storeName: settings.storeName,
-  whatsappNumber: settings.whatsappNumber.replace(/\D/g, ''),
+  whatsappNumber: normalizeWhatsAppNumber(settings.whatsappNumber),
   contactPhone: settings.contactPhone,
   contactEmail: settings.contactEmail,
   address: settings.address,

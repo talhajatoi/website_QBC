@@ -76,7 +76,7 @@ export default function AdminSettings() {
           <>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <label className="field sm:col-span-2">Store name<input className="input" maxLength="120" {...businessForm.register('storeName', { required: 'Store name is required' })} /></label>
-              <label className="field">WhatsApp number<input className="input" placeholder="92XXXXXXXXXX" {...businessForm.register('whatsappNumber', { required: 'WhatsApp number is required' })} /><small>International country code and digits; formatting is removed when saved.</small></label>
+              <label className="field">WhatsApp number<input className="input" placeholder="92XXXXXXXXXX or 03XXXXXXXXX" {...businessForm.register('whatsappNumber', { required: 'WhatsApp number is required' })} /><small>Enter the full international number or a Pakistani mobile number beginning with 03; it will be saved in international format.</small></label>
               <label className="field">Contact phone<input className="input" maxLength="40" {...businessForm.register('contactPhone')} /></label>
               <label className="field">Contact email<input className="input" type="email" maxLength="254" {...businessForm.register('contactEmail')} /></label>
               <label className="field sm:col-span-2">Store address<textarea className="input min-h-24" maxLength="500" {...businessForm.register('address')} /></label>

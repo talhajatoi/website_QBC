@@ -85,6 +85,19 @@ describe('platform basics and authentication', () => {
     });
     expect((await request(app).get('/api/business')).body.data.business.storeName).toBe('Quetta Cycles');
   });
+  it('normalizes Pakistani local WhatsApp numbers to international format for checkout', async () => {
+    const settings = {
+      storeName: 'Quetta Cycles',
+      whatsappNumber: '03128029807',
+      contactPhone: '',
+      contactEmail: '',
+      address: '',
+      socialLinks: {},
+    };
+    const updated = await request(app).patch('/api/admin/business').set(authHeader(token)).send(settings);
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.business.whatsappNumber).toBe('923128029807');
+  });
   it('updates administrator name and email only after password confirmation', async () => {
     const profile = { name: 'Store Manager', email: 'manager@example.com', currentPassword: adminCredentials.password };
     const rejected = await request(app).patch('/api/auth/me').set(authHeader(token)).send({ ...profile, currentPassword: 'wrong' });

@@ -1,9 +1,10 @@
 import { ApiError } from '../utils/ApiError.js';
 import { getCodAdvancePaymentInstructions } from './payment.service.js';
 import { getBusinessSettings } from './business-settings.service.js';
+import { normalizeWhatsAppNumber } from '../utils/whatsapp-number.js';
 const pkr = (value) => `PKR ${Number(value).toLocaleString('en-PK')}`;
 export const whatsappNumberForBusiness = (settings) => {
-  const number = (settings.whatsappNumber || '').replace(/\D/g, '');
+  const number = normalizeWhatsAppNumber(settings.whatsappNumber);
   if (!/^[1-9]\d{7,14}$/.test(number)) throw new ApiError(503, 'WhatsApp checkout is not configured');
   return number;
 };

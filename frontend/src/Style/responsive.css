@@ -1,1 +1,23 @@
-@media (max-width: 640px) { .container-page { width: min(100% - 1.25rem, 1180px); } }
+@media (max-width: 640px) {
+  .container-page { width: min(100% - 1.25rem, 1180px); }
+  .section-title { font-size: clamp(1.75rem, 8vw, 2.5rem); }
+  .site-header .container-page { gap: .5rem; }
+  .site-logo-image { width: clamp(6rem, 29vw, 7.5rem); }
+  .site-header .btn-icon { height: 2.25rem; width: 2.25rem; }
+  .site-mobile-nav { max-height: calc(100dvh - 5rem); overflow-y: auto; }
+  .admin-stat { padding: 1rem; }
+}
+
+@media (max-width: 360px) {
+  .container-page { width: calc(100% - 1rem); }
+  .site-header .container-page { gap: .35rem; }
+  .site-header .flex.items-center.gap-2 { gap: .25rem; }
+  .site-logo-image { width: 5.75rem; }
+  .site-header .btn-icon { height: 2rem; width: 2rem; }
+  .btn-primary, .btn-secondary, .btn-secondary-dark { padding: .7rem .8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

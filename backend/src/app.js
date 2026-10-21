@@ -41,6 +41,10 @@ app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 app.use(
   "/uploads",
+  (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
   express.static(uploadsDirectory, {
     index: false,
     maxAge: env.NODE_ENV === "production" ? "7d" : 0,

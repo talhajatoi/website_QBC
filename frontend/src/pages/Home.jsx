@@ -26,7 +26,7 @@ export default function Home() {
     <>
       <section className="home-hero relative isolate overflow-hidden bg-zinc-950 text-white">
         <AnimatedBikeHero />
-        <div className="container-page relative z-10 flex min-h-[620px] items-center py-16 sm:py-20">
+        <div className="container-page relative z-10 flex min-h-[min(620px,75svh)] items-center py-16 sm:py-20">
           <motion.div
             className="max-w-3xl"
             initial={{ opacity: 0, y: 24 }}
@@ -36,7 +36,7 @@ export default function Home() {
             <p className="mb-4 text-sm font-black tracking-[.2em] text-brand">
               QUETTA, PAKISTAN
             </p>
-            <h1 className="font-display text-5xl font-black leading-none sm:text-7xl">
+            <h1 className="font-display text-[clamp(2.5rem,9vw,4.5rem)] font-black leading-none sm:text-7xl">
               RIDE YOUR WAY.
               <br />
               <span className="text-brand">OWN THE ROAD.</span>
@@ -57,7 +57,7 @@ export default function Home() {
         </div>
       </section>
       <section className="container-page py-18">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Find your style</p>
             <h2 className="section-title">Explore categories</h2>
@@ -83,7 +83,7 @@ export default function Home() {
       </section>
       <section className="bg-[#f7f7f5]">
         <div className="container-page py-18">
-          <div className="flex items-end justify-between">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="eyebrow">Curated rides</p>
               <h2 className="section-title">Featured bicycles</h2>

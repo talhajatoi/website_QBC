@@ -111,7 +111,9 @@ describe('catalogue and review management', () => {
     expect(imagePaths).toHaveLength(2);
     expect(imagePaths[0]).toMatch(/^\/uploads\/products\/.+\.jpg$/);
     expect(imagePaths[1]).toMatch(/^\/uploads\/products\/.+\.png$/);
-    expect((await request(app).get(imagePaths[0])).status).toBe(200);
+    const productImageResponse = await request(app).get(imagePaths[0]);
+    expect(productImageResponse.status).toBe(200);
+    expect(productImageResponse.headers['cross-origin-resource-policy']).toBe('cross-origin');
     expect((await request(app).get(imagePaths[1])).status).toBe(200);
     const changed = await request(app).patch(`/api/admin/products/${created.body.data.product._id}`).set(authHeader(token)).send({ salePrice: 40000 });
     expect(changed.body.data.product.salePrice).toBe(40000);
@@ -144,6 +146,9 @@ describe('catalogue and review management', () => {
     expect(submitted.body.data.review.reviewDate.slice(0, 10)).not.toBe('2000-01-01');
     expect(Object.hasOwn(submitted.body.data.review, 'title')).toBe(false);
     expect(submitted.body.data.review.imageUrl).toMatch(/^\/uploads\/reviews\/.+\.jpg$/);
+    const reviewImageResponse = await request(app).get(submitted.body.data.review.imageUrl);
+    expect(reviewImageResponse.status).toBe(200);
+    expect(reviewImageResponse.headers['cross-origin-resource-policy']).toBe('cross-origin');
     expect((await request(app).get('/api/reviews')).body.data.reviews).toHaveLength(2);
     const reviewId = submitted.body.data.review._id;
     const published = await request(app).patch(`/api/admin/reviews/${reviewId}`).set(authHeader(token)).field('status', 'published').field('reviewDate', '2023-12-25').attach('image', jpg, { filename: 'admin-bike.jpg', contentType: 'image/jpeg' });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import { getAdminProducts } from '../../services/product.service';
@@ -7,6 +7,7 @@ import { createReview, deleteReview, getAdminReviews, getReviewImageUrl, updateR
 import LoadingSpinner from '../../Components/LoadingSpinner';
 import EmptyState from '../../Components/EmptyState';
 import RatingStars from '../../Components/RatingStars';
+import RatingInput from '../../Components/RatingInput';
 import Pagination from '../../Components/Pagination';
 import { formatDate } from '../../utils/formatDate';
 
@@ -28,9 +29,10 @@ export default function ReviewsManagement() {
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState('');
   const [editing, setEditing] = useState(null);
-  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, control, setValue, formState: { isSubmitting } } = useForm({
     defaultValues: { status: 'hidden', rating: 5, verifiedPurchase: false, reviewDate: getToday() },
   });
+  const currentRating = useWatch({ control, name: 'rating' });
 
   const load = useCallback((page = 1) => getAdminReviews({ status: status || undefined, page, limit: 20 })
     .then((response) => setData(response.data))
@@ -108,7 +110,7 @@ export default function ReviewsManagement() {
       <div className="mt-5 grid gap-4 md:grid-cols-2">
         {!editing._id && <label className="field md:col-span-2">Product<select className="input" {...register('productId', { required: true })}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>}
         <label className="field">Anonymous display name<input className="input" {...register('displayName', { required: true })} /></label>
-        <label className="field">Rating<select className="input" {...register('rating')}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} star{rating > 1 ? 's' : ''}</option>)}</select></label>
+        <label className="field">Rating<RatingInput value={currentRating || 5} onChange={(rating) => setValue('rating', rating, { shouldDirty: true, shouldValidate: true })} /></label>
         <label className="field">Review date (day/month/year)<input className="input" type="date" {...register('reviewDate', { required: true })} /></label>
         <label className="field md:col-span-2">Review text<textarea className="input min-h-28" {...register('text', { required: true })} /></label>
         <label className="field">Publication status<select className="input" {...register('status')}><option value="hidden">Hidden</option><option value="published">Published</option></select></label>

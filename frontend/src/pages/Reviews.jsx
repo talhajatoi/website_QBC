@@ -9,6 +9,7 @@ import ErrorMessage from '../Components/ErrorMessage';
 import LoadingSpinner from '../Components/LoadingSpinner';
 import Pagination from '../Components/Pagination';
 import RatingStars from '../Components/RatingStars';
+import RatingInput from '../Components/RatingInput';
 import { formatDate } from '../utils/formatDate';
 
 export default function Reviews() {
@@ -22,6 +23,7 @@ export default function Reviews() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [rating, setRating] = useState(5);
 
   useEffect(() => {
     let active = true;
@@ -79,8 +81,9 @@ export default function Reviews() {
         rating: values.get('rating'),
         text: values.get('text'),
       }, imageFile);
-      toast.success('Thanks! Your review has been submitted for approval.');
+      toast.success('Thanks! Your review has been published.');
       form.reset();
+      setRating(5);
       setImageFile(null);
     } catch (requestError) {
       toast.error(requestError.message);
@@ -96,7 +99,7 @@ export default function Reviews() {
     <section className="mt-9 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(320px,.72fr)]">
       <div>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div><h2 className="text-2xl font-black">What riders are saying</h2><p className="mt-1 text-sm text-zinc-500">Reviews are shown after moderation.</p></div>
+          <div><h2 className="text-2xl font-black">What riders are saying</h2><p className="mt-1 text-sm text-zinc-500">Customer reviews appear right away.</p></div>
           <label className="field">Sort by<select className="input" value={sort} onChange={(event) => { setPage(1); setSort(event.target.value); }}><option value="newest">Newest</option><option value="rating">Highest rated</option></select></label>
         </div>
         {error && <div className="mt-5"><ErrorMessage message={error} /></div>}
@@ -118,11 +121,11 @@ export default function Reviews() {
       </div>
       <aside className="h-fit rounded-3xl bg-white p-6 shadow-sm sm:p-7">
         <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand"><Star className="h-5 w-5 fill-current" /></span><div><p className="eyebrow">Your experience</p><h2 className="text-2xl font-black">Write a review</h2></div></div>
-        <p className="mt-3 text-sm leading-6 text-zinc-600">Reviews are checked by our team before they appear on the site.</p>
+        <p className="mt-3 text-sm leading-6 text-zinc-600">Choose a star rating and share your experience with the community.</p>
         <form className="mt-5 grid gap-4" onSubmit={submit}>
           <label className="field">Bicycle<select className="input" name="productId" defaultValue="" required><option value="" disabled>Select a bicycle</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
           <label className="field">Your name<input className="input" name="displayName" minLength="2" maxLength="80" required /></label>
-          <label className="field">Rating<select className="input" name="rating" defaultValue="5" required>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} star{rating !== 1 ? 's' : ''}</option>)}</select></label>
+          <label className="field">Rating<RatingInput value={rating} onChange={setRating} /></label>
           <label className="field">Your review<textarea className="input min-h-28" name="text" minLength="5" maxLength="3000" required /></label>
           <label className="field">Product photo <span className="font-normal text-zinc-500">Optional · JPG, up to 5 MB</span>
             <span className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-300 p-3 text-sm font-bold"><ImagePlus className="h-5 w-5 shrink-0" /><input className="min-w-0 text-sm font-normal" type="file" accept=".jpg,.jpeg,image/jpeg" onChange={(event) => chooseImage(event.target.files?.[0])} /></span>

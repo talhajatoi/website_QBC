@@ -67,6 +67,8 @@ describe('platform basics and authentication', () => {
       contactPhone: '081-123456',
       contactEmail: 'hello@example.com',
       address: 'Quetta, Pakistan',
+      mapsUrl: 'https://maps.app.goo.gl/example-location',
+      aboutMessage: 'A local bicycle shop serving riders across Quetta.',
       socialLinks: {
         facebook: 'https://facebook.com/example',
         instagram: '',
@@ -84,6 +86,10 @@ describe('platform basics and authentication', () => {
       whatsappNumber: '923001234567',
     });
     expect((await request(app).get('/api/business')).body.data.business.storeName).toBe('Quetta Cycles');
+    const invalidMapsLink = await request(app).patch('/api/admin/business')
+      .set(authHeader(token))
+      .send({ ...settings, mapsUrl: 'https://example.com/not-a-map' });
+    expect(invalidMapsLink.status).toBe(422);
   });
   it('normalizes Pakistani local WhatsApp numbers to international format for checkout', async () => {
     const settings = {
@@ -211,8 +217,9 @@ describe('catalogue and review management', () => {
     expect(productImageResponse.status).toBe(200);
     expect(productImageResponse.headers['cross-origin-resource-policy']).toBe('cross-origin');
     expect((await request(app).get(imagePaths[1])).status).toBe(200);
-    const changed = await request(app).patch(`/api/admin/products/${created.body.data.product._id}`).set(authHeader(token)).send({ salePrice: 40000 });
+    const changed = await request(app).patch(`/api/admin/products/${created.body.data.product._id}`).set(authHeader(token)).send({ salePrice: 40000, condition: 'Used' });
     expect(changed.body.data.product.salePrice).toBe(40000);
+    expect(changed.body.data.product.condition).toBe('Used');
     const removed = await request(app).delete(`/api/admin/products/${created.body.data.product._id}`).set(authHeader(token));
     expect(removed.status).toBe(200);
     expect((await request(app).get(imagePaths[0])).status).toBe(404);

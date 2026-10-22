@@ -2,14 +2,29 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { ImagePlus, Plus, X } from 'lucide-react';
+import { ImagePlus, X } from 'lucide-react';
 import { createProduct, getAdminProducts, getProductImageUrl, updateProduct } from '../../services/product.service';
 import { getAdminCategories } from '../../services/category.service';
 import LoadingSpinner from '../../Components/LoadingSpinner';
 
 const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const split = (value) => value.split('\n').map((line) => line.trim()).filter(Boolean);
-const emptySpecifications = () => Array.from({ length: 6 }, () => ({ name: '', value: '' }));
+const specificationNames = [
+  'Material',
+  'Fork',
+  'Groupset',
+  'Speed',
+  'Frame Size',
+  'Wheel Size',
+  'Tyre Brand',
+  'Tyre Size',
+  'Bottom Bracket',
+  'Axle Type',
+  'Suspension Brand',
+  'Suspension Type',
+  'Suspension Travel',
+];
+const emptySpecifications = () => specificationNames.map((name) => ({ name, value: '' }));
 const acceptedImage = (file) => ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
 
 export default function ProductForm() {
@@ -22,6 +37,7 @@ export default function ProductForm() {
   const [selectedImages, setSelectedImages] = useState([]);
   const [selectedPreviews, setSelectedPreviews] = useState([]);
   const [specificationRows, setSpecificationRows] = useState(emptySpecifications);
+  const [legacySpecifications, setLegacySpecifications] = useState({});
 
   useEffect(() => {
     Promise.all([getAdminCategories(), editing ? getAdminProducts({ limit: 100 }) : Promise.resolve(null)])
@@ -29,6 +45,7 @@ export default function ProductForm() {
         setCategories(categoryResponse.data.categories);
         if (!productResponse) {
           setSpecificationRows(emptySpecifications());
+          setLegacySpecifications({});
           return;
         }
         const product = productResponse.data.products.find((item) => item._id === id);
@@ -37,14 +54,19 @@ export default function ProductForm() {
           return;
         }
         setExistingImages(product.images || []);
-        const productSpecifications = Object.entries(product.specifications || {}).map(([name, value]) => ({ name, value }));
-        setSpecificationRows([
-          ...productSpecifications,
-          ...Array.from({ length: Math.max(0, 6 - productSpecifications.length) }, () => ({ name: '', value: '' })),
-        ]);
+        const productSpecifications = Object.entries(product.specifications || {});
+        const knownSpecifications = new Map(specificationNames.map((name) => [name.toLocaleLowerCase(), name]));
+        const savedValues = new Map(productSpecifications.map(([name, value]) => [name.toLocaleLowerCase(), value]));
+        setSpecificationRows(specificationNames.map((name) => ({
+          name,
+          value: savedValues.get(name.toLocaleLowerCase()) || '',
+        })));
+        const savedCondition = savedValues.get('condition');
+        setLegacySpecifications(Object.fromEntries(productSpecifications.filter(([name]) => name.toLocaleLowerCase() !== 'condition' && !knownSpecifications.has(name.toLocaleLowerCase()))));
         reset({
           ...product,
           category: product.category?._id || product.category,
+          condition: product.condition || savedCondition || '',
           salePrice: product.salePrice ?? '',
           sizes: product.sizes?.join('\n') || '',
           colors: product.colors?.join('\n') || '',
@@ -79,23 +101,11 @@ export default function ProductForm() {
   };
 
   const submit = async (values) => {
-    const specifications = {};
-    const specificationNames = new Set();
-    for (const [index, row] of specificationRows.entries()) {
-      const name = row.name.trim();
+    const specifications = { ...legacySpecifications };
+    for (const row of specificationRows) {
+      const name = row.name;
       const value = row.value.trim();
-      if (!name && !value) continue;
-      if (!name || !value) {
-        toast.error(`Complete both the name and value for specification ${index + 1}.`);
-        return;
-      }
-      const normalizedName = name.toLocaleLowerCase();
-      if (specificationNames.has(normalizedName)) {
-        toast.error(`Specification name "${name}" is entered more than once.`);
-        return;
-      }
-      specificationNames.add(normalizedName);
-      specifications[name] = value;
+      if (value) specifications[name] = value;
     }
     const payload = {
       ...values,
@@ -131,6 +141,7 @@ export default function ProductForm() {
         <label className="field">SKU<input className="input" {...register('sku', { required: 'SKU is required' })} />{errors.sku && <small>{errors.sku.message}</small>}</label>
         <label className="field">Brand<input className="input" {...register('brand', { required: 'Brand is required' })} /></label>
         <label className="field">Bicycle type<input className="input" placeholder="Mountain, City, Road…" {...register('bicycleType')} /></label>
+        <label className="field">Condition<input className="input" maxLength="100" placeholder="e.g. 9.5/10, New, or Used" {...register('condition')} /></label>
         <label className="field">Category<select className="input" {...register('category', { required: 'Choose a category' })}><option value="">Select category</option>{categories.map((category) => <option value={category._id} key={category._id}>{category.name}</option>)}</select></label>
         <label className="field">Price (PKR)<input className="input" type="number" min="0" {...register('price', { required: 'Price is required' })} /></label>
         <label className="field">Sale price (optional)<input className="input" type="number" min="0" {...register('salePrice')} /></label>
@@ -140,16 +151,13 @@ export default function ProductForm() {
         <label className="field">Colours <span className="font-normal text-zinc-400">(one per line)</span><textarea className="input min-h-24" {...register('colors')} /></label>
         <fieldset className="min-w-0 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:col-span-2 sm:p-5">
           <legend className="px-2 text-sm font-bold text-zinc-900">Specifications</legend>
-          <p className="mb-4 text-sm text-zinc-500">Add a name and value for each detail. Leave unused rows blank.</p>
+          <p className="mb-4 text-sm text-zinc-500">Enter only the specifications that apply. Blank fields are not shown to customers.</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {specificationRows.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-2" key={index}>
-              <label className="field"><span className="text-xs font-semibold text-zinc-500">Specification {index + 1} · Name</span><input className="input" placeholder="e.g. Frame material" maxLength="80" value={row.name} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /></label>
-              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="e.g. Aluminum" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+            {specificationRows.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-2" key={row.name}>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Specification</span><input className="input bg-zinc-50" value={row.name} readOnly /></label>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="Optional" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
             </div>)}
           </div>
-          <button type="button" className="btn-secondary mt-4 w-fit" onClick={() => setSpecificationRows((rows) => [...rows, ...Array.from({ length: 6 }, () => ({ name: '', value: '' }))])}>
-            <Plus className="h-4 w-4" />Add 6 more specifications
-          </button>
         </fieldset>
       </div>
       <div className="mt-6 flex flex-wrap gap-5">

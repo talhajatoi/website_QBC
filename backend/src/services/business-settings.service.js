@@ -11,6 +11,8 @@ export const publicBusinessDetails = (settings) => ({
   contactPhone: settings.contactPhone,
   contactEmail: settings.contactEmail,
   address: settings.address,
+  mapsUrl: settings.mapsUrl,
+  aboutMessage: settings.aboutMessage,
   socialLinks: {
     facebook: settings.socialLinks.facebook,
     instagram: settings.socialLinks.instagram,

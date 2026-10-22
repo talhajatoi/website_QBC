@@ -11,6 +11,8 @@ const emptyBusiness = {
   contactPhone: '',
   contactEmail: '',
   address: '',
+  mapsUrl: '',
+  aboutMessage: '',
   socialLinks: { facebook: '', instagram: '', tiktok: '', youtube: '' },
 };
 
@@ -80,6 +82,8 @@ export default function AdminSettings() {
               <label className="field">Contact phone<input className="input" maxLength="40" {...businessForm.register('contactPhone')} /></label>
               <label className="field">Contact email<input className="input" type="email" maxLength="254" {...businessForm.register('contactEmail')} /></label>
               <label className="field sm:col-span-2">Store address<textarea className="input min-h-24" maxLength="500" {...businessForm.register('address')} /></label>
+              <label className="field sm:col-span-2">Google Maps location link<input className="input" type="url" placeholder="https://maps.app.goo.gl/..." {...businessForm.register('mapsUrl')} /><small>Paste the Google Maps share link for your exact store location. If left blank, the address will be searched on Google Maps.</small></label>
+              <label className="field sm:col-span-2">About us message<textarea className="input min-h-36" maxLength="5000" placeholder="Tell customers about your store..." {...businessForm.register('aboutMessage')} /></label>
             </div>
             <fieldset className="mt-6 rounded-2xl border border-zinc-200 p-4">
               <legend className="px-2 text-sm font-bold">Social media links</legend>

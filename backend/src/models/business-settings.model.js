@@ -15,6 +15,8 @@ const businessSettingsSchema = new mongoose.Schema({
   contactPhone: { type: String, trim: true, maxlength: 40, default: '' },
   contactEmail: { type: String, trim: true, lowercase: true, maxlength: 254, default: '' },
   address: { type: String, trim: true, maxlength: 500, default: '' },
+  mapsUrl: { type: String, trim: true, maxlength: 2048, default: '' },
+  aboutMessage: { type: String, trim: true, maxlength: 5000, default: '' },
   socialLinks: { type: socialLinksSchema, default: () => ({}) },
 }, { timestamps: true });
 

@@ -8,10 +8,27 @@ const socialNames = {
   youtube: 'YouTube',
 };
 
+const isGoogleMapsLink = (value) => {
+  try {
+    const { protocol, hostname } = new URL(value);
+    const host = hostname.toLowerCase();
+    return ['http:', 'https:'].includes(protocol) &&
+      (host === 'goo.gl' || host === 'maps.app.goo.gl' || host === 'google.com' || host.endsWith('.google.com'));
+  } catch {
+    return false;
+  }
+};
+
 export default function Contact() {
   const { business, loading, error } = useBusiness();
   const whatsapp = business?.whatsappNumber?.replace(/\D/g, '');
   const socials = Object.entries(business?.socialLinks || {}).filter(([, url]) => url);
+  const addressIsMapsLink = isGoogleMapsLink(business?.address || '');
+  const mapsUrl = business?.mapsUrl || (addressIsMapsLink
+    ? business.address
+    : business?.address
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address)}`
+      : '');
   const hasContactDetails = whatsapp || business?.contactPhone || business?.contactEmail || business?.address || socials.length;
 
   return (
@@ -62,10 +79,11 @@ export default function Contact() {
               </a>
             )}
             {business?.address && (
-              <div className="flex min-w-0 items-start gap-3 rounded-2xl border border-zinc-200 p-4 sm:col-span-2">
+              <a className="flex min-w-0 items-start gap-3 rounded-2xl border border-zinc-200 p-4 transition hover:border-zinc-400 sm:col-span-2" href={mapsUrl} target="_blank" rel="noreferrer">
                 <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand-dark" />
-                <span className="min-w-0"><span className="block text-xs font-semibold text-zinc-500">Address</span><span className="block whitespace-pre-line break-words font-medium">{business.address}</span></span>
-              </div>
+                <span className="min-w-0"><span className="block text-xs font-semibold text-zinc-500">Address</span><span className="block whitespace-pre-line break-words font-medium">{addressIsMapsLink ? 'Open exact store location in Google Maps' : business.address}</span></span>
+                <ExternalLink className="ml-auto mt-1 h-4 w-4 shrink-0 text-zinc-400" />
+              </a>
             )}
             {socials.map(([platform, url]) => (
               <a key={platform} className="flex min-w-0 items-center gap-3 rounded-2xl border border-zinc-200 p-4 font-bold transition hover:border-zinc-400" href={url} target="_blank" rel="noreferrer">

@@ -1,17 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { getCategoryProducts, getProductImageUrl } from '../services/product.service';
+import { getCategoryImageUrl } from '../services/category.service';
 
 const fallbackImage = 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=900&q=80';
 
 export default function CategoryShowcase({ category }) {
-  const [active, setActive] = useState(false);
+  const cardRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [products, setProducts] = useState([]);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [requested, setRequested] = useState(false);
+  const active = visible || hovered || focused;
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return undefined;
+    if (!('IntersectionObserver' in window)) {
+      setVisible(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting && entry.intersectionRatio >= 0.3),
+      { threshold: [0, 0.3] },
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!active || requested) return;
@@ -35,18 +55,15 @@ export default function CategoryShowcase({ category }) {
   const product = products[index];
   const image = active && product?.images?.[0]
     ? getProductImageUrl(product.images[0])
-    : category.imageUrl || fallbackImage;
-  const deactivate = () => {
-    setActive(false);
-    setIndex(0);
-  };
+    : getCategoryImageUrl(category.imageUrl) || fallbackImage;
 
   return <Link
+    ref={cardRef}
     to={`/categories/${category.slug}`}
-    onPointerEnter={() => setActive(true)}
-    onPointerLeave={deactivate}
-    onFocus={() => setActive(true)}
-    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) deactivate(); }}
+    onPointerEnter={() => setHovered(true)}
+    onPointerLeave={() => setHovered(false)}
+    onFocus={() => setFocused(true)}
+    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
     className="category-showcase group relative h-56 overflow-hidden rounded-3xl bg-zinc-900"
     aria-label={`Explore ${category.name}${active && product ? `: ${product.name}` : ''}`}
   >

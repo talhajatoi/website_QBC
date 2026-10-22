@@ -7,6 +7,7 @@ const productSchema = new mongoose.Schema({
   brand: { type: String, required: true, trim: true, maxlength: 100, index: true },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true, index: true },
   bicycleType: { type: String, trim: true, maxlength: 100, default: '', index: true },
+  condition: { type: String, trim: true, maxlength: 100, default: '' },
   price: { type: Number, required: true, min: 0 },
   salePrice: { type: Number, min: 0, default: null },
   stockQuantity: { type: Number, required: true, min: 0, default: 0 },

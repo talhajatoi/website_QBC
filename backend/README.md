@@ -35,7 +35,7 @@ For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HT
 | `ENABLE_DEMO_CONTENT` | Set `true` only for a development demonstration. Demo reviews are otherwise hidden and never affect product totals. |
 | `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Used only by the initial-admin seed script. Password must be at least 12 characters. |
 
-Public store name, WhatsApp number, public contact phone/email, address, and social URLs are kept in one MongoDB `BusinessSettings` record. Read public values at `GET /api/business`; authorized admins update them through `PATCH /api/admin/business` or the dashboard Settings page. Admin sign-in name/email are separate private account fields and can be changed in Settings after confirming the current password. Payment account details remain backend environment variables and are not part of public business settings.
+Public store name, WhatsApp number, public contact phone/email, address, Google Maps link, About page message, and social URLs are kept in one MongoDB `BusinessSettings` record. Read public values at `GET /api/business`; authorized admins update them through `PATCH /api/admin/business` or the dashboard Settings page. Admin sign-in name/email are separate private account fields and can be changed in Settings after confirming the current password. Payment account details remain backend environment variables and are not part of public business settings.
 
 Never commit `.env`. Product image fields accept HTTPS URLs and product uploads; category images can be entered as URLs or uploaded in the admin category form.
 

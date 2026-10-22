@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { ImagePlus, X } from 'lucide-react';
+import { ImagePlus, Plus, X } from 'lucide-react';
 import { createProduct, getAdminProducts, getProductImageUrl, updateProduct } from '../../services/product.service';
 import { getAdminCategories } from '../../services/category.service';
 import LoadingSpinner from '../../Components/LoadingSpinner';
@@ -37,7 +37,7 @@ export default function ProductForm() {
   const [selectedImages, setSelectedImages] = useState([]);
   const [selectedPreviews, setSelectedPreviews] = useState([]);
   const [specificationRows, setSpecificationRows] = useState(emptySpecifications);
-  const [legacySpecifications, setLegacySpecifications] = useState({});
+  const [customSpecifications, setCustomSpecifications] = useState([]);
 
   useEffect(() => {
     Promise.all([getAdminCategories(), editing ? getAdminProducts({ limit: 100 }) : Promise.resolve(null)])
@@ -45,7 +45,7 @@ export default function ProductForm() {
         setCategories(categoryResponse.data.categories);
         if (!productResponse) {
           setSpecificationRows(emptySpecifications());
-          setLegacySpecifications({});
+          setCustomSpecifications([]);
           return;
         }
         const product = productResponse.data.products.find((item) => item._id === id);
@@ -55,14 +55,16 @@ export default function ProductForm() {
         }
         setExistingImages(product.images || []);
         const productSpecifications = Object.entries(product.specifications || {});
-        const knownSpecifications = new Map(specificationNames.map((name) => [name.toLocaleLowerCase(), name]));
         const savedValues = new Map(productSpecifications.map(([name, value]) => [name.toLocaleLowerCase(), value]));
         setSpecificationRows(specificationNames.map((name) => ({
           name,
           value: savedValues.get(name.toLocaleLowerCase()) || '',
         })));
         const savedCondition = savedValues.get('condition');
-        setLegacySpecifications(Object.fromEntries(productSpecifications.filter(([name]) => name.toLocaleLowerCase() !== 'condition' && !knownSpecifications.has(name.toLocaleLowerCase()))));
+        const knownNames = new Set([...specificationNames, 'condition'].map((name) => name.toLocaleLowerCase()));
+        setCustomSpecifications(productSpecifications
+          .filter(([name]) => !knownNames.has(name.toLocaleLowerCase()))
+          .map(([name, value]) => ({ name, value })));
         reset({
           ...product,
           category: product.category?._id || product.category,
@@ -101,11 +103,30 @@ export default function ProductForm() {
   };
 
   const submit = async (values) => {
-    const specifications = { ...legacySpecifications };
+    const specifications = {};
+    const usedNames = new Set();
     for (const row of specificationRows) {
       const name = row.name;
       const value = row.value.trim();
-      if (value) specifications[name] = value;
+      if (!value) continue;
+      specifications[name] = value;
+      usedNames.add(name.toLocaleLowerCase());
+    }
+    for (const [index, row] of customSpecifications.entries()) {
+      const name = row.name.trim();
+      const value = row.value.trim();
+      if (!name && !value) continue;
+      if (!name || !value) {
+        toast.error(`Complete both the name and value for custom specification ${index + 1}.`);
+        return;
+      }
+      const normalizedName = name.toLocaleLowerCase();
+      if (usedNames.has(normalizedName)) {
+        toast.error(`Specification name "${name}" is already in use.`);
+        return;
+      }
+      usedNames.add(normalizedName);
+      specifications[name] = value;
     }
     const payload = {
       ...values,
@@ -157,7 +178,15 @@ export default function ProductForm() {
               <label className="field"><span className="text-xs font-semibold text-zinc-500">Specification</span><input className="input bg-zinc-50" value={row.name} readOnly /></label>
               <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="Optional" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
             </div>)}
+            {customSpecifications.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-[1fr_1fr_auto]" key={`custom-${index}`}>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Custom name</span><input className="input" placeholder="e.g. Model year" maxLength="80" value={row.name} onChange={(event) => setCustomSpecifications((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /></label>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="Enter a value" maxLength="500" value={row.value} onChange={(event) => setCustomSpecifications((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+              <button type="button" className="btn-icon self-end text-red-600" aria-label={`Remove custom specification ${index + 1}`} onClick={() => setCustomSpecifications((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}><X className="h-4 w-4" /></button>
+            </div>)}
           </div>
+          <button type="button" className="btn-secondary mt-4 w-fit" onClick={() => setCustomSpecifications((rows) => [...rows, { name: '', value: '' }])}>
+            <Plus className="h-4 w-4" />Add custom specification
+          </button>
         </fieldset>
       </div>
       <div className="mt-6 flex flex-wrap gap-5">

@@ -36,7 +36,7 @@ export default function Home() {
             transition={{ duration: 0.55 }}
           >
             <p className="mb-4 text-sm font-black tracking-[.2em] text-brand">
-              {business.address || "BUILT FOR EVERY JOURNEY"}
+              BUILT FOR EVERY JOURNEY
             </p>
             <h1 className="font-display text-[clamp(2.5rem,9vw,4.5rem)] font-black leading-none sm:text-7xl">
               RIDE YOUR WAY.

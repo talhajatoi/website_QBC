@@ -26,6 +26,7 @@ export default function ProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [options, setOptions] = useState({});
   const [image, setImage] = useState('');
+  const [galleryInteracted, setGalleryInteracted] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [error, setError] = useState('');
   const touchStartX = useRef(null);
@@ -42,11 +43,13 @@ export default function ProductDetails() {
     setOptions({});
     setQuantity(1);
     setLightboxOpen(false);
+    setGalleryInteracted(false);
     getProduct(slug).then(async (response) => {
       const nextProduct = response.data.product;
       if (!current) return;
       setProduct(nextProduct);
       setImage(nextProduct.images?.[0] || fallbackImage);
+      setGalleryInteracted(false);
       const [all, top, reviewSummary] = await Promise.allSettled([
         getReviews(nextProduct._id, { limit: 6 }),
         getTopReview(nextProduct._id),
@@ -63,10 +66,23 @@ export default function ProductDetails() {
   }, [slug]);
 
   useEffect(() => {
+    const slideshowImages = product?.images?.slice(0, 3) || [];
+    if (galleryInteracted || slideshowImages.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setImage((current) => {
+        const index = slideshowImages.indexOf(current);
+        return slideshowImages[(index + 1 + slideshowImages.length) % slideshowImages.length];
+      });
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [galleryInteracted, product]);
+
+  useEffect(() => {
     if (!lightboxOpen) return undefined;
     const closeOrNavigate = (event) => {
       if (event.key === 'Escape') setLightboxOpen(false);
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      setGalleryInteracted(true);
       const imageList = product?.images?.length ? product.images : [fallbackImage];
       const direction = event.key === 'ArrowRight' ? 1 : -1;
       setImage((current) => {
@@ -90,6 +106,7 @@ export default function ProductDetails() {
     });
   };
   const handleTouchStart = (event) => {
+    setGalleryInteracted(true);
     touchStartX.current = event.changedTouches[0].clientX;
   };
   const handleTouchEnd = (event) => {
@@ -106,6 +123,7 @@ export default function ProductDetails() {
       swiped.current = false;
       return;
     }
+    setGalleryInteracted(true);
     setLightboxOpen(true);
   };
   const add = async (buyNow = false) => {
@@ -149,15 +167,15 @@ export default function ProductDetails() {
             {condition && <span className="pointer-events-none absolute left-4 top-4 rounded-full bg-white/95 px-4 py-2 text-sm font-black text-zinc-900 shadow">Condition · {condition}</span>}
             {images.length > 1 && (
               <>
-                <button type="button" className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow" onClick={() => changeImage(-1)} aria-label="Previous product image"><ArrowLeft className="h-5 w-5" /></button>
-                <button type="button" className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow" onClick={() => changeImage(1)} aria-label="Next product image"><ArrowRight className="h-5 w-5" /></button>
+                <button type="button" className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow" onClick={() => { setGalleryInteracted(true); changeImage(-1); }} aria-label="Previous product image"><ArrowLeft className="h-5 w-5" /></button>
+                <button type="button" className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 shadow" onClick={() => { setGalleryInteracted(true); changeImage(1); }} aria-label="Next product image"><ArrowRight className="h-5 w-5" /></button>
               </>
             )}
           </div>
           {images.length > 1 && (
             <div className="mt-3 flex gap-3 overflow-auto">
               {images.map((src, index) => (
-                <button type="button" key={src} className={`h-18 w-18 shrink-0 overflow-hidden rounded-xl border-2 ${image === src ? 'border-brand-dark' : 'border-transparent'}`} onClick={() => setImage(src)} aria-label={`Show product image ${index + 1}`}>
+                <button type="button" key={src} className={`h-18 w-18 shrink-0 overflow-hidden rounded-xl border-2 ${image === src ? 'border-brand-dark' : 'border-transparent'}`} onClick={() => { setGalleryInteracted(true); setImage(src); }} aria-label={`Show product image ${index + 1}`}>
                   <img src={getProductImageUrl(src)} alt={`${product.name} view ${index + 1}`} className="h-full w-full object-cover" />
                 </button>
               ))}

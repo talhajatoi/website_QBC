@@ -23,7 +23,6 @@ export default function Footer() {
           <p className="mt-4 max-w-xs text-sm leading-6 text-zinc-400">
             Quality rides for everyday journeys and weekend adventures.
           </p>
-          {business?.address && <p className="mt-3 text-sm text-zinc-400">{business.address}</p>}
         </div>
         <div>
           <h3 className="site-footer-heading font-black uppercase tracking-wider">Explore</h3>

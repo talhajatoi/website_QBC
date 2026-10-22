@@ -7,8 +7,7 @@ import { getCategoryImageUrl } from '../services/category.service';
 const fallbackImage = 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=900&q=80';
 
 export default function CategoryShowcase({ category }) {
-  const cardRef = useRef(null);
-  const [visible, setVisible] = useState(false);
+  const touchPreviewed = useRef(false);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [products, setProducts] = useState([]);
@@ -16,22 +15,7 @@ export default function CategoryShowcase({ category }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [requested, setRequested] = useState(false);
-  const active = visible || hovered || focused;
-
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card) return undefined;
-    if (!('IntersectionObserver' in window)) {
-      setVisible(true);
-      return undefined;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry.isIntersecting && entry.intersectionRatio >= 0.3),
-      { threshold: [0, 0.3] },
-    );
-    observer.observe(card);
-    return () => observer.disconnect();
-  }, []);
+  const active = hovered || focused;
 
   useEffect(() => {
     if (!active || requested) return;
@@ -58,10 +42,20 @@ export default function CategoryShowcase({ category }) {
     : getCategoryImageUrl(category.imageUrl) || fallbackImage;
 
   return <Link
-    ref={cardRef}
     to={`/categories/${category.slug}`}
-    onPointerEnter={() => setHovered(true)}
-    onPointerLeave={() => setHovered(false)}
+    onPointerEnter={(event) => { if (event.pointerType !== 'touch') setHovered(true); }}
+    onPointerDown={(event) => {
+      if (event.pointerType === 'touch' && !active) {
+        touchPreviewed.current = true;
+        setHovered(true);
+      }
+    }}
+    onClick={(event) => {
+      if (!touchPreviewed.current) return;
+      touchPreviewed.current = false;
+      event.preventDefault();
+    }}
+    onPointerLeave={(event) => { if (event.pointerType !== 'touch') setHovered(false); }}
     onFocus={() => setFocused(true)}
     onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}
     className="category-showcase group relative h-56 overflow-hidden rounded-3xl bg-zinc-900"

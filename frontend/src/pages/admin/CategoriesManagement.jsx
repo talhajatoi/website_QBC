@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import {
   createCategory,
   deleteCategory,
   getAdminCategories,
+  getCategoryImageUrl,
   updateCategory,
 } from "../../services/category.service";
 import LoadingSpinner from "../../Components/LoadingSpinner";
@@ -23,8 +24,21 @@ export default function CategoriesManagement() {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { isSubmitting },
   } = useForm({ defaultValues: { isActive: true } });
+  const imageUrl = useWatch({ control, name: "imageUrl" });
+  const categoryImage = useWatch({ control, name: "categoryImage" })?.[0];
+  const [uploadedImagePreview, setUploadedImagePreview] = useState("");
+  useEffect(() => {
+    if (!categoryImage) {
+      setUploadedImagePreview("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(categoryImage);
+    setUploadedImagePreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [categoryImage]);
   const load = () =>
     getAdminCategories()
       .then((r) => setCategories(r.data.categories))
@@ -45,7 +59,13 @@ export default function CategoriesManagement() {
     );
   };
   const save = async (data) => {
-    const payload = { ...data, slug: data.slug || slugify(data.name), imageUrl: data.imageUrl || undefined };
+    const { categoryImage: selectedImage, ...fields } = data;
+    const payload = {
+      ...fields,
+      slug: data.slug || slugify(data.name),
+      imageUrl: data.imageUrl || "",
+      categoryImage: selectedImage?.[0],
+    };
     try {
       if (editing?._id) await updateCategory(editing._id, payload);
       else await createCategory(payload);
@@ -114,9 +134,36 @@ export default function CategoriesManagement() {
               <textarea className="input" {...register("description")} />
             </label>
             <label className="field md:col-span-2">
-              Image URL
-              <input className="input" {...register("imageUrl")} />
+              Image URL (optional)
+              <input
+                className="input"
+                type="url"
+                placeholder="https://example.com/category.jpg"
+                {...register("imageUrl")}
+              />
             </label>
+            <label className="field md:col-span-2">
+              Or upload an image (JPEG, PNG, or WebP; max 10 MB)
+              <input
+                className="input"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                {...register("categoryImage")}
+              />
+              <span className="text-xs font-medium text-zinc-500">
+                If you provide both, the uploaded image will be used.
+              </span>
+            </label>
+            {(uploadedImagePreview || imageUrl) && (
+              <div className="md:col-span-2">
+                <p className="field mb-2">Image preview</p>
+                <img
+                  className="h-36 w-56 rounded-xl object-cover"
+                  src={uploadedImagePreview || getCategoryImageUrl(imageUrl)}
+                  alt="Category preview"
+                />
+              </div>
+            )}
           </div>
           <label className="mt-5 flex items-center gap-2 text-sm font-bold">
             <input type="checkbox" {...register("isActive")} />
@@ -134,11 +181,20 @@ export default function CategoriesManagement() {
               className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm"
               key={c._id}
             >
-              <div>
-                <h2 className="font-black">{c.name}</h2>
-                <p className="text-sm text-zinc-500">
-                  /{c.slug} · {c.isActive ? "Active" : "Inactive"}
-                </p>
+              <div className="flex min-w-0 items-center gap-4">
+                {c.imageUrl && (
+                  <img
+                    className="h-14 w-20 rounded-lg object-cover"
+                    src={getCategoryImageUrl(c.imageUrl)}
+                    alt=""
+                  />
+                )}
+                <div>
+                  <h2 className="font-black">{c.name}</h2>
+                  <p className="text-sm text-zinc-500">
+                    /{c.slug} · {c.isActive ? "Active" : "Inactive"}
+                  </p>
+                </div>
               </div>
               <div className="flex gap-2">
                 <button className="btn-icon" onClick={() => open(c)}>

@@ -13,8 +13,10 @@ export const uploadsDirectory = path.resolve(
 );
 const reviewDirectory = path.join(uploadsDirectory, "reviews");
 const productDirectory = path.join(uploadsDirectory, "products");
+const categoryDirectory = path.join(uploadsDirectory, "categories");
 fs.mkdirSync(reviewDirectory, { recursive: true });
 fs.mkdirSync(productDirectory, { recursive: true });
+fs.mkdirSync(categoryDirectory, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, callback) => callback(null, reviewDirectory),
@@ -108,6 +110,55 @@ export const uploadProductImages = [
   },
 ];
 
+const categoryStorage = multer.diskStorage({
+  destination: (req, file, callback) => callback(null, categoryDirectory),
+  filename: (req, file, callback) =>
+    callback(null, `${crypto.randomUUID()}`),
+});
+const categoryUpload = multer({
+  storage: categoryStorage,
+  limits: { fileSize: 10 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, callback) => {
+    const hasImageExtension = /\.(jpe?g|png|webp)$/i.test(file.originalname);
+    if (
+      !["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(file.mimetype) &&
+      !hasImageExtension
+    )
+      return callback(new ApiError(422, "Category image must be JPEG, PNG, or WebP"));
+    callback(null, true);
+  },
+});
+
+export const uploadCategoryImage = [
+  categoryUpload.single("categoryImage"),
+  async (req, res, next) => {
+    if (!req.file) return next();
+    try {
+      const detected = await fileTypeFromFile(req.file.path);
+      const extensions = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+      };
+      const extension = extensions[detected?.mime];
+      if (!extension) {
+        await removeUploadedFile(req.file);
+        return next(new ApiError(422, "Category image must contain valid JPEG, PNG, or WebP data"));
+      }
+      const filename = `${req.file.filename}.${extension}`;
+      const newPath = path.join(categoryDirectory, filename);
+      await fs.promises.rename(req.file.path, newPath);
+      req.file.path = newPath;
+      req.file.filename = filename;
+      req.file.publicUrl = `/uploads/categories/${filename}`;
+      return next();
+    } catch (error) {
+      await removeUploadedFile(req.file);
+      return next(error);
+    }
+  },
+];
+
 export const removeUploadedFile = async (file) => {
   if (file?.path) await fs.promises.unlink(file.path).catch(() => {});
 };
@@ -121,5 +172,10 @@ export const removeReviewImage = async (imageUrl) => {
 export const removeProductImage = async (imageUrl) => {
   if (!imageUrl?.startsWith("/uploads/products/")) return;
   const filePath = path.join(productDirectory, path.basename(imageUrl));
+  await fs.promises.unlink(filePath).catch(() => {});
+};
+export const removeCategoryImage = async (imageUrl) => {
+  if (!imageUrl?.startsWith("/uploads/categories/")) return;
+  const filePath = path.join(categoryDirectory, path.basename(imageUrl));
   await fs.promises.unlink(filePath).catch(() => {});
 };

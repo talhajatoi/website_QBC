@@ -25,7 +25,7 @@ For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HT
 | `MONGODB_URI` | Required MongoDB connection URI. |
 | `JWT_SECRET` | Required secret of at least 32 characters; generate it with a password manager. |
 | `JWT_EXPIRES_IN` | Admin bearer-token lifetime, e.g. `15m`. |
-| `UPLOADS_DIR` | Optional absolute directory for product/review uploads. On Render, mount a persistent disk at `/var/data` and set this to `/var/data/uploads`; without a persistent disk, uploaded files may be lost when the service restarts or redeploys. |
+| `UPLOADS_DIR` | Optional absolute directory for product, review, and category uploads. On Render, mount a persistent disk at `/var/data` and set this to `/var/data/uploads`; without a persistent disk, uploaded files may be lost when the service restarts or redeploys. |
 | `ALLOWED_ORIGINS` | Optional comma-separated additional frontend origins for CORS; use origin only, without a path. The two quettabikesclub.com production origins are included automatically. When set, this is authoritative. |
 | `FRONTEND_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
 | `CLIENT_URL` | Legacy comma-separated CORS allowlist; used only when `ALLOWED_ORIGINS` is unset. |
@@ -37,11 +37,11 @@ For production, set `NODE_ENV=production`, use a managed MongoDB replica set, HT
 
 Public store name, WhatsApp number, public contact phone/email, address, and social URLs are kept in one MongoDB `BusinessSettings` record. Read public values at `GET /api/business`; authorized admins update them through `PATCH /api/admin/business` or the dashboard Settings page. Admin sign-in name/email are separate private account fields and can be changed in Settings after confirming the current password. Payment account details remain backend environment variables and are not part of public business settings.
 
-Never commit `.env`. Product image fields accept HTTPS URLs; configure a cloud image host/CDN separately before a frontend upload feature is added.
+Never commit `.env`. Product image fields accept HTTPS URLs and product uploads; category images can be entered as URLs or uploaded in the admin category form.
 
 ### Persistent image uploads on Render
 
-Product and review image files are written to the local filesystem. To keep them across deploys, attach a persistent disk to the backend Render web service with mount path `/var/data`, then set `UPLOADS_DIR=/var/data/uploads` in that service's environment and redeploy. The backend creates the directory and its `products` and `reviews` subdirectories automatically. Existing database image paths do not contain the image bytes: if an old image URL returns 404, that file is already missing and must be uploaded again after persistent storage is configured. A persistent disk preserves files across redeploys of the same service, but it is not a substitute for backups.
+Product, review, and category image files are written to the local filesystem. To keep them across deploys, attach a persistent disk to the backend Render web service with mount path `/var/data`, then set `UPLOADS_DIR=/var/data/uploads` in that service's environment and redeploy. The backend creates the image subdirectories automatically. Existing database image paths do not contain the image bytes: if an old image URL returns 404, that file is already missing and must be uploaded again after persistent storage is configured. A persistent disk preserves files across redeploys of the same service, but it is not a substitute for backups.
 
 ## First administrator
 

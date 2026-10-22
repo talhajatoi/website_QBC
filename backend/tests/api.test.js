@@ -148,6 +148,50 @@ describe('platform basics and authentication', () => {
 });
 
 describe('catalogue and review management', () => {
+  it('supports category image URLs and uploaded images, replacing and deleting uploaded files', async () => {
+    const urlCategory = await request(app).post('/api/admin/categories')
+      .set(authHeader(token))
+      .send({ name: 'Road Bikes', slug: 'road-bikes', imageUrl: 'https://example.com/road-bikes.jpg' });
+    expect(urlCategory.status).toBe(201);
+    expect(urlCategory.body.data.category.imageUrl).toBe('https://example.com/road-bikes.jpg');
+
+    const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07]);
+    const created = await request(app).post('/api/admin/categories')
+      .set(authHeader(token))
+      .field('name', 'City Bikes')
+      .field('slug', 'city-bikes')
+      .field('imageUrl', 'https://example.com/ignored.jpg')
+      .attach('categoryImage', jpg, { filename: 'city.jpg', contentType: 'image/jpeg' });
+    expect(created.status).toBe(201);
+    const uploadedImage = created.body.data.category.imageUrl;
+    expect(uploadedImage).toMatch(/^\/uploads\/categories\/.+\.jpg$/);
+    expect((await request(app).get('/api/categories')).body.data.categories)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ slug: 'city-bikes', imageUrl: uploadedImage })]));
+    expect((await request(app).get(uploadedImage)).status).toBe(200);
+
+    const replaced = await request(app).patch(`/api/admin/categories/${created.body.data.category._id}`)
+      .set(authHeader(token))
+      .send({ imageUrl: 'https://example.com/new-city.jpg' });
+    expect(replaced.body.data.category.imageUrl).toBe('https://example.com/new-city.jpg');
+    expect((await request(app).get(uploadedImage)).status).toBe(404);
+
+    const secondUpload = await request(app).patch(`/api/admin/categories/${created.body.data.category._id}`)
+      .set(authHeader(token))
+      .attach('categoryImage', jpg, { filename: 'city-replacement.jpg', contentType: 'image/jpeg' });
+    const secondImage = secondUpload.body.data.category.imageUrl;
+    const deleted = await request(app).delete(`/api/admin/categories/${created.body.data.category._id}`)
+      .set(authHeader(token));
+    expect(secondUpload.status).toBe(200);
+    expect(deleted.status).toBe(200);
+    expect((await request(app).get(secondImage)).status).toBe(404);
+
+    const invalidUpload = await request(app).post('/api/admin/categories')
+      .set(authHeader(token))
+      .field('name', 'Invalid Image')
+      .field('slug', 'invalid-image')
+      .attach('categoryImage', Buffer.from('not an image'), { filename: 'invalid.jpg', contentType: 'image/jpeg' });
+    expect(invalidUpload.status).toBe(422);
+  });
   it('creates, lists, updates, and deletes products with uploaded JPEG and PNG images', async () => {
     const category = await createCategory();
     const payload = { name: 'City Rider', slug: 'city-rider', description: 'Comfortable commuter bicycle with durable parts.', brand: 'Quetta', category: category.id, bicycleType: 'City', price: 45000, stockQuantity: 7, sku: 'CITY-001', sizes: ['M'], colors: ['Yellow'] };

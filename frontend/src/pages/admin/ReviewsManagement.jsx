@@ -67,7 +67,7 @@ export default function ReviewsManagement() {
     const imageFile = image?.[0];
     try {
       if (editing?._id) {
-        await updateReview(editing._id, { displayName, rating, reviewDate, text, status, verifiedPurchase, removeImage: Boolean(removeImage) }, imageFile);
+        await updateReview(editing._id, { productId, displayName, rating, reviewDate, text, status, verifiedPurchase, removeImage: Boolean(removeImage) }, imageFile);
       } else {
         await createReview(productId, { displayName, rating, reviewDate, text, status, verifiedPurchase }, imageFile);
       }
@@ -108,7 +108,7 @@ export default function ReviewsManagement() {
         <button type="button" onClick={() => setEditing(null)}><X /></button>
       </div>
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        {!editing._id && <label className="field md:col-span-2">Product<select className="input" {...register('productId', { required: true })}><option value="">Select product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>}
+        <label className="field md:col-span-2">Bike<select className="input" {...register('productId', { required: true })}><option value="">Select bike</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
         <label className="field">Anonymous display name<input className="input" {...register('displayName', { required: true })} /></label>
         <label className="field">Rating<RatingInput value={currentRating || 5} onChange={(rating) => setValue('rating', rating, { shouldDirty: true, shouldValidate: true })} /></label>
         <label className="field">Review date (day/month/year)<input className="input" type="date" {...register('reviewDate', { required: true })} /></label>

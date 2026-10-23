@@ -154,6 +154,33 @@ describe('platform basics and authentication', () => {
 });
 
 describe('catalogue and review management', () => {
+  it('lets an admin move a review to another bike and recalculates both product ratings', async () => {
+    const category = await createCategory();
+    const originalProduct = await createProduct(category, { name: 'Original Bike', slug: 'original-bike' });
+    const destinationProduct = await createProduct(category, { name: 'Destination Bike', slug: 'destination-bike' });
+    const created = await request(app).post(`/api/admin/products/${originalProduct.id}/reviews`)
+      .set(authHeader(token))
+      .send({ displayName: 'Test Rider', rating: 5, reviewDate: '2026-10-23', text: 'A useful bike review.', status: 'published' });
+    const reviewId = created.body.data.review._id;
+
+    const moved = await request(app).patch(`/api/admin/reviews/${reviewId}`)
+      .set(authHeader(token))
+      .field('productId', destinationProduct.id);
+
+    expect(created.status).toBe(201);
+    expect(moved.status).toBe(200);
+    expect(String(moved.body.data.review.product)).toBe(destinationProduct.id);
+    expect((await Product.findById(originalProduct.id)).reviewCount).toBe(0);
+    expect((await Product.findById(destinationProduct.id)).reviewCount).toBe(1);
+    expect((await Product.findById(destinationProduct.id)).averageRating).toBe(5);
+
+    const invalidMove = await request(app).patch(`/api/admin/reviews/${reviewId}`)
+      .set(authHeader(token))
+      .field('productId', '000000000000000000000001');
+    expect(invalidMove.status).toBe(422);
+    expect(String((await Review.findById(reviewId)).product)).toBe(destinationProduct.id);
+  });
+
   it('supports category image URLs and uploaded images, replacing and deleting uploaded files', async () => {
     const urlCategory = await request(app).post('/api/admin/categories')
       .set(authHeader(token))

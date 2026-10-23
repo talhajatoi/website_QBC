@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import path from "node:path";
 import { z } from "zod";
 
 dotenv.config();
@@ -51,6 +52,18 @@ if (!parsed.success) {
     .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
     .join("; ");
   throw new Error(`Invalid environment configuration: ${errors}`);
+}
+if (parsed.data.NODE_ENV === "production") {
+  if (!parsed.data.UPLOADS_DIR) {
+    throw new Error(
+      "UPLOADS_DIR is required in production. Configure it to point to a persistent mounted disk (for Render, use /var/data/uploads).",
+    );
+  }
+  if (!path.isAbsolute(parsed.data.UPLOADS_DIR)) {
+    throw new Error(
+      `UPLOADS_DIR must be an absolute path in production; received "${parsed.data.UPLOADS_DIR}". For Render, use /var/data/uploads.`,
+    );
+  }
 }
 
 const parseAllowedOrigins = (values) =>

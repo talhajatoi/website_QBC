@@ -38,22 +38,22 @@ export default function Dashboard() {
     <h1 className="section-title">Dashboard</h1>
     <p className="mt-2 text-sm text-zinc-600">Live sales, order, product, and review metrics.</p>
 
-    <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-      {metrics.map(({ key, label, icon: Icon }) => <article className="rounded-3xl bg-white p-6 shadow-sm" key={key}>
-        <Icon className="h-7 w-7 text-brand-dark" />
-        <p className="mt-6 text-4xl font-black">{data[key]}</p>
-        <p className="mt-1 text-sm font-bold text-zinc-500">{label}</p>
+    <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      {metrics.map(({ key, label, icon: Icon }) => <article className="flex aspect-square min-w-0 flex-col rounded-2xl bg-white p-4 shadow-sm sm:p-5" key={key}>
+        <Icon className="h-5 w-5 shrink-0 text-brand-dark sm:h-6 sm:w-6" />
+        <p className="mt-auto break-words text-3xl font-black leading-none sm:text-4xl">{data[key]}</p>
+        <p className="mt-2 text-xs font-bold leading-snug text-zinc-500 sm:text-sm">{label}</p>
       </article>)}
-      <article className="rounded-3xl bg-white p-6 shadow-sm">
-        <Banknote className="h-7 w-7 text-brand-dark" />
-        <p className="mt-6 text-3xl font-black">{formatCurrency(data.sales.deliveredRevenue)}</p>
-        <p className="mt-1 text-sm font-bold text-zinc-500">Revenue from delivered orders</p>
-        <p className="mt-2 text-xs text-zinc-400">{data.sales.deliveredOrders} delivered orders</p>
+      <article className="flex aspect-square min-w-0 flex-col rounded-2xl bg-white p-4 shadow-sm sm:p-5">
+        <Banknote className="h-5 w-5 shrink-0 text-brand-dark sm:h-6 sm:w-6" />
+        <p className="mt-auto break-words text-xl font-black leading-tight sm:text-2xl">{formatCurrency(data.sales.deliveredRevenue)}</p>
+        <p className="mt-2 text-xs font-bold leading-snug text-zinc-500 sm:text-sm">Revenue from delivered orders</p>
+        <p className="mt-1 text-[11px] leading-snug text-zinc-400 sm:text-xs">{data.sales.deliveredOrders} delivered orders</p>
       </article>
-      <article className="rounded-3xl bg-white p-6 shadow-sm">
-        <MessageSquareText className="h-7 w-7 text-brand-dark" />
-        <p className="mt-6 text-4xl font-black">{data.reviews.published}</p>
-        <p className="mt-1 text-sm font-bold text-zinc-500">Published customer reviews</p>
+      <article className="flex aspect-square min-w-0 flex-col rounded-2xl bg-white p-4 shadow-sm sm:p-5">
+        <MessageSquareText className="h-5 w-5 shrink-0 text-brand-dark sm:h-6 sm:w-6" />
+        <p className="mt-auto break-words text-3xl font-black leading-none sm:text-4xl">{data.reviews.published}</p>
+        <p className="mt-2 text-xs font-bold leading-snug text-zinc-500 sm:text-sm">Published customer reviews</p>
       </article>
     </div>
 

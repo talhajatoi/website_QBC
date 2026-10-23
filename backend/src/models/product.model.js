@@ -14,6 +14,7 @@ const productSchema = new mongoose.Schema({
   sku: { type: String, required: true, trim: true, uppercase: true, unique: true, index: true, maxlength: 100 },
   images: { type: [String], default: [] },
   specifications: { type: Map, of: String, default: {} },
+  components: { type: Map, of: String, default: {} },
   sizes: { type: [String], default: [] },
   colors: { type: [String], default: [] },
   isAvailable: { type: Boolean, default: true, index: true },

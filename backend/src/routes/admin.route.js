@@ -36,7 +36,7 @@ const validateReviewBody = (schema) => { const validateBody = validate(schema); 
 const parseProductForm = (req, res, next) => {
   if (!req.is('multipart/form-data')) return next();
   try {
-    for (const key of ['images', 'sizes', 'colors', 'specifications']) {
+    for (const key of ['images', 'sizes', 'colors', 'specifications', 'components']) {
       if (req.body[key] !== undefined) req.body[key] = JSON.parse(req.body[key]);
     }
     if (req.body.salePrice === 'null') req.body.salePrice = null;

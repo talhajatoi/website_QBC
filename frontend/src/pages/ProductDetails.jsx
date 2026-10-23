@@ -246,6 +246,7 @@ export default function ProductDetails() {
   const legacyCondition = Object.entries(product.specifications || {}).find(([key]) => key.toLocaleLowerCase() === 'condition')?.[1];
   const condition = product.condition || legacyCondition;
   const specifications = Object.entries(product.specifications || {}).filter(([key, value]) => key.toLocaleLowerCase() !== 'condition' && String(value).trim());
+  const components = Object.entries(product.components || {}).filter(([, value]) => String(value).trim());
 
   return (
     <main className="container-page py-10">
@@ -329,8 +330,23 @@ export default function ProductDetails() {
               <div className="@container mt-4">
                 <dl className="grid grid-cols-1 gap-2 @md:grid-cols-2">
                   {specifications.map(([key, value]) => (
-                    <div className="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm" key={key}>
+                    <div className="grid min-w-0 grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm" key={key}>
                       <dt className="break-words font-bold capitalize leading-5">{key}</dt>
+                      <dd className="break-words leading-5 text-zinc-600">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </>
+          )}
+          {components.length > 0 && (
+            <>
+              <h2 className="mt-8 section-title text-3xl">Components</h2>
+              <div className="@container mt-3">
+                <dl className="grid grid-cols-1 gap-1.5 @md:grid-cols-2">
+                  {components.map(([name, value]) => (
+                    <div className="grid min-w-0 grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm" key={name}>
+                      <dt className="break-words font-bold capitalize leading-5">{name}</dt>
                       <dd className="break-words leading-5 text-zinc-600">{value}</dd>
                     </div>
                   ))}

@@ -24,7 +24,9 @@ const specificationNames = [
   'Suspension Type',
   'Suspension Travel',
 ];
+const componentNames = ['Stem', 'Handlebar', 'Seatpost', 'Saddle', 'Wheels'];
 const emptySpecifications = () => specificationNames.map((name) => ({ name, value: '' }));
+const emptyComponents = () => componentNames.map((name) => ({ name, value: '' }));
 const acceptedImage = (file) => ['image/jpeg', 'image/jpg', 'image/png'].includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
 
 export default function ProductForm() {
@@ -38,6 +40,8 @@ export default function ProductForm() {
   const [selectedPreviews, setSelectedPreviews] = useState([]);
   const [specificationRows, setSpecificationRows] = useState(emptySpecifications);
   const [customSpecifications, setCustomSpecifications] = useState([]);
+  const [componentRows, setComponentRows] = useState(emptyComponents);
+  const [customComponents, setCustomComponents] = useState([]);
 
   useEffect(() => {
     Promise.all([getAdminCategories(), editing ? getAdminProducts({ limit: 100 }) : Promise.resolve(null)])
@@ -46,6 +50,8 @@ export default function ProductForm() {
         if (!productResponse) {
           setSpecificationRows(emptySpecifications());
           setCustomSpecifications([]);
+          setComponentRows(emptyComponents());
+          setCustomComponents([]);
           return;
         }
         const product = productResponse.data.products.find((item) => item._id === id);
@@ -64,6 +70,16 @@ export default function ProductForm() {
         const knownNames = new Set([...specificationNames, 'condition'].map((name) => name.toLocaleLowerCase()));
         setCustomSpecifications(productSpecifications
           .filter(([name]) => !knownNames.has(name.toLocaleLowerCase()))
+          .map(([name, value]) => ({ name, value })));
+        const productComponents = Object.entries(product.components || {});
+        const savedComponents = new Map(productComponents.map(([name, value]) => [name.toLocaleLowerCase(), value]));
+        setComponentRows(componentNames.map((name) => ({
+          name,
+          value: savedComponents.get(name.toLocaleLowerCase()) || '',
+        })));
+        const fixedComponentNames = new Set(componentNames.map((name) => name.toLocaleLowerCase()));
+        setCustomComponents(productComponents
+          .filter(([name]) => !fixedComponentNames.has(name.toLocaleLowerCase()))
           .map(([name, value]) => ({ name, value })));
         reset({
           ...product,
@@ -128,6 +144,30 @@ export default function ProductForm() {
       usedNames.add(normalizedName);
       specifications[name] = value;
     }
+    const components = {};
+    const usedComponentNames = new Set();
+    for (const row of componentRows) {
+      const value = row.value.trim();
+      if (!value) continue;
+      components[row.name] = value;
+      usedComponentNames.add(row.name.toLocaleLowerCase());
+    }
+    for (const [index, row] of customComponents.entries()) {
+      const name = row.name.trim();
+      const value = row.value.trim();
+      if (!name && !value) continue;
+      if (!name || !value) {
+        toast.error(`Complete both the name and value for custom component ${index + 1}.`);
+        return;
+      }
+      const normalizedName = name.toLocaleLowerCase();
+      if (usedComponentNames.has(normalizedName)) {
+        toast.error(`Component name "${name}" is already in use.`);
+        return;
+      }
+      usedComponentNames.add(normalizedName);
+      components[name] = value;
+    }
     const payload = {
       ...values,
       slug: values.slug || slugify(values.name),
@@ -139,6 +179,7 @@ export default function ProductForm() {
       sizes: split(values.sizes),
       colors: split(values.colors),
       specifications,
+      components,
     };
     try {
       if (editing) await updateProduct(id, payload);
@@ -174,9 +215,9 @@ export default function ProductForm() {
           <legend className="px-2 text-sm font-bold text-zinc-900">Specifications</legend>
           <p className="mb-4 text-sm text-zinc-500">Enter only the specifications that apply. Blank fields are not shown to customers.</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {specificationRows.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-2" key={row.name}>
+            {specificationRows.map((row) => <div className="grid min-w-0 gap-1.5 rounded-xl border border-zinc-200 bg-white p-2 sm:grid-cols-[0.8fr_1.2fr]" key={row.name}>
               <label className="field"><span className="text-xs font-semibold text-zinc-500">Specification</span><input className="input bg-zinc-50" value={row.name} readOnly /></label>
-              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="Optional" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="Optional" maxLength="500" value={row.value} onChange={(event) => setSpecificationRows((rows) => rows.map((item) => item.name === row.name ? { ...item, value: event.target.value } : item))} /></label>
             </div>)}
             {customSpecifications.map((row, index) => <div className="grid min-w-0 gap-3 rounded-xl border border-zinc-200 bg-white p-3 sm:grid-cols-[1fr_1fr_auto]" key={`custom-${index}`}>
               <label className="field"><span className="text-xs font-semibold text-zinc-500">Custom name</span><input className="input" placeholder="e.g. Model year" maxLength="80" value={row.name} onChange={(event) => setCustomSpecifications((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /></label>
@@ -186,6 +227,24 @@ export default function ProductForm() {
           </div>
           <button type="button" className="btn-secondary mt-4 w-fit" onClick={() => setCustomSpecifications((rows) => [...rows, { name: '', value: '' }])}>
             <Plus className="h-4 w-4" />Add custom specification
+          </button>
+        </fieldset>
+        <fieldset className="min-w-0 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:col-span-2 sm:p-5">
+          <legend className="px-2 text-sm font-bold text-zinc-900">Components</legend>
+          <p className="mb-4 text-sm text-zinc-500">Add values for the product components. Leave unused fields blank.</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {componentRows.map((row) => <div className="grid min-w-0 gap-1.5 rounded-xl border border-zinc-200 bg-white p-2 sm:grid-cols-[0.8fr_1.2fr]" key={row.name}>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Component</span><input className="input bg-zinc-50" value={row.name} readOnly /></label>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="Optional" maxLength="500" value={row.value} onChange={(event) => setComponentRows((rows) => rows.map((item, rowIndex) => rowIndex === componentNames.indexOf(row.name) ? { ...item, value: event.target.value } : item))} /></label>
+            </div>)}
+            {customComponents.map((row, index) => <div className="grid min-w-0 gap-1.5 rounded-xl border border-zinc-200 bg-white p-2 sm:grid-cols-[1fr_1fr_auto]" key={`custom-component-${index}`}>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Custom name</span><input className="input" placeholder="e.g. Crankset" maxLength="80" value={row.name} onChange={(event) => setCustomComponents((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, name: event.target.value } : item))} /></label>
+              <label className="field"><span className="text-xs font-semibold text-zinc-500">Value</span><input className="input" placeholder="Enter a value" maxLength="500" value={row.value} onChange={(event) => setCustomComponents((rows) => rows.map((item, rowIndex) => rowIndex === index ? { ...item, value: event.target.value } : item))} /></label>
+              <button type="button" className="btn-icon self-end text-red-600" aria-label={`Remove custom component ${index + 1}`} onClick={() => setCustomComponents((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}><X className="h-4 w-4" /></button>
+            </div>)}
+          </div>
+          <button type="button" className="btn-secondary mt-4 w-fit" onClick={() => setCustomComponents((rows) => [...rows, { name: '', value: '' }])}>
+            <Plus className="h-4 w-4" />Add custom component
           </button>
         </fieldset>
       </div>

@@ -200,8 +200,9 @@ describe('catalogue and review management', () => {
   });
   it('creates, lists, updates, and deletes products with uploaded JPEG and PNG images', async () => {
     const category = await createCategory();
-    const payload = { name: 'City Rider', slug: 'city-rider', description: 'Comfortable commuter bicycle with durable parts.', brand: 'Quetta', category: category.id, bicycleType: 'City', price: 45000, stockQuantity: 7, sku: 'CITY-001', sizes: ['M'], colors: ['Yellow'] };
+    const payload = { name: 'City Rider', slug: 'city-rider', description: 'Comfortable commuter bicycle with durable parts.', brand: 'Quetta', category: category.id, bicycleType: 'City', price: 45000, stockQuantity: 7, sku: 'CITY-001', sizes: ['M'], colors: ['Yellow'], components: { Stem: 'Alloy', Wheels: '700c', 'Custom crankset': 'Shimano' } };
     const created = await request(app).post('/api/admin/products').set(authHeader(token)).send(payload);
+    expect(created.body.data.product.components).toMatchObject(payload.components);
     const listed = await request(app).get('/api/products?sort=price_asc');
     const jpg = Buffer.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07]);
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lV8AAAAASUVORK5CYII=', 'base64');

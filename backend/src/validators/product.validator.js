@@ -7,7 +7,7 @@ const productImage = z.union([
 const fields = {
   name: z.string().trim().min(2).max(200), slug, description: z.string().trim().min(10).max(10000), brand: z.string().trim().min(1).max(100), category: objectId,
   bicycleType: z.string().trim().max(100).optional(), condition: z.string().trim().max(100).optional(), price: z.coerce.number().finite().min(0), salePrice: z.coerce.number().finite().min(0).nullable().optional(), stockQuantity: z.coerce.number().int().min(0), sku: z.string().trim().min(1).max(100).transform((v) => v.toUpperCase()),
-  images: z.array(productImage).max(12).default([]), specifications: z.record(z.string().max(80), z.string().trim().max(500)).default({}), sizes: stringArray, colors: stringArray, isAvailable: z.boolean().optional(), isFeatured: z.boolean().optional(),
+  images: z.array(productImage).max(12).default([]), specifications: z.record(z.string().max(80), z.string().trim().max(500)).default({}), components: z.record(z.string().trim().min(1).max(80), z.string().trim().max(500)).default({}), sizes: stringArray, colors: stringArray, isAvailable: z.boolean().optional(), isFeatured: z.boolean().optional(),
 };
 export const productCreateSchema = z.object(fields).superRefine((data, ctx) => { if (data.salePrice != null && data.salePrice > data.price) ctx.addIssue({ code: 'custom', path: ['salePrice'], message: 'Sale price cannot exceed price' }); });
 export const productUpdateSchema = z.object(fields).partial().superRefine((data, ctx) => { if (data.salePrice != null && data.price != null && data.salePrice > data.price) ctx.addIssue({ code: 'custom', path: ['salePrice'], message: 'Sale price cannot exceed price' }); });

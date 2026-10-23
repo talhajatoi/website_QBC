@@ -1,12 +1,15 @@
 import app from "./app.js";
 import { connectDatabase } from "./config/db.js";
 import { env } from "./config/env.js";
+import { uploadsDirectory } from "./middleware/upload.middleware.js";
 
 const start = async () => {
   try {
     await connectDatabase(env.MONGODB_URI);
     const server = app.listen(env.PORT, () =>
-      console.log(`API listening on port ${env.PORT}`),
+      console.log(
+        `API listening on port ${env.PORT}; uploads directory: ${uploadsDirectory}`,
+      ),
     );
     const shutdown = async () => {
       server.close(async () => {

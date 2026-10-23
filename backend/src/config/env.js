@@ -53,13 +53,19 @@ if (!parsed.success) {
     .join("; ");
   throw new Error(`Invalid environment configuration: ${errors}`);
 }
+const configuredUploadsDir = parsed.data.UPLOADS_DIR?.replaceAll("\\", "/");
+const uploadsDir =
+  parsed.data.NODE_ENV === "production" &&
+  configuredUploadsDir?.startsWith("var/data/")
+    ? path.posix.resolve("/", configuredUploadsDir)
+    : parsed.data.UPLOADS_DIR;
 if (parsed.data.NODE_ENV === "production") {
-  if (!parsed.data.UPLOADS_DIR) {
+  if (!uploadsDir) {
     throw new Error(
       "UPLOADS_DIR is required in production. Configure it to point to a persistent mounted disk (for Render, use /var/data/uploads).",
     );
   }
-  if (!path.isAbsolute(parsed.data.UPLOADS_DIR)) {
+  if (!path.isAbsolute(uploadsDir)) {
     throw new Error(
       `UPLOADS_DIR must be an absolute path in production; received "${parsed.data.UPLOADS_DIR}". For Render, use /var/data/uploads.`,
     );
@@ -106,6 +112,7 @@ const configuredOrigins = parseAllowedOrigins([
 
 export const env = Object.freeze({
   ...parsed.data,
+  ...(uploadsDir && { UPLOADS_DIR: uploadsDir }),
   allowedOrigins: [
     ...new Set([
       ...productionOrigins,

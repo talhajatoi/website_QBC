@@ -28,6 +28,8 @@ export default function ProductDetails() {
   const [image, setImage] = useState('');
   const [galleryInteracted, setGalleryInteracted] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [zoomOffset, setZoomOffset] = useState({ x: 0, y: 0 });
   const [error, setError] = useState('');
   const touchGesture = useRef(null);
   const swiped = useRef(false);
@@ -45,6 +47,8 @@ export default function ProductDetails() {
     setQuantity(1);
     setLightboxOpen(false);
     setGalleryInteracted(false);
+    setZoomScale(1);
+    setZoomOffset({ x: 0, y: 0 });
     getProduct(slug).then(async (response) => {
       const nextProduct = response.data.product;
       if (!current) return;
@@ -81,9 +85,15 @@ export default function ProductDetails() {
   useEffect(() => {
     if (!lightboxOpen) return undefined;
     const closeOrNavigate = (event) => {
-      if (event.key === 'Escape') setLightboxOpen(false);
+      if (event.key === 'Escape') {
+        setLightboxOpen(false);
+        setZoomScale(1);
+        setZoomOffset({ x: 0, y: 0 });
+      }
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       setGalleryInteracted(true);
+      setZoomScale(1);
+      setZoomOffset({ x: 0, y: 0 });
       const imageList = product?.images?.length ? product.images : [fallbackImage];
       const direction = event.key === 'ArrowRight' ? 1 : -1;
       setImage((current) => {
@@ -101,41 +111,92 @@ export default function ProductDetails() {
   }, [lightboxOpen, product]);
 
   const changeImage = (direction) => {
+    setZoomScale(1);
+    setZoomOffset({ x: 0, y: 0 });
     setImage((current) => {
       const index = Math.max(0, images.indexOf(current));
       return images[(index + direction + images.length) % images.length];
     });
   };
+  const distanceBetweenTouches = (touches) => {
+    const deltaX = touches[0].clientX - touches[1].clientX;
+    const deltaY = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(deltaX, deltaY);
+  };
   const handleTouchStart = (event) => {
     setGalleryInteracted(true);
-    if (event.touches.length !== 1) {
-      touchGesture.current = { cancelled: true };
+    if (event.touches.length > 1) {
+      const currentGesture = touchGesture.current;
+      touchGesture.current = {
+        mode: 'pinch',
+        startDistance: distanceBetweenTouches(event.touches),
+        startScale: currentGesture?.mode === 'pinch' ? currentGesture.startScale : zoomScale,
+        startOffset: zoomOffset,
+      };
+      swiped.current = true;
       return;
     }
     const touch = event.touches[0];
     touchGesture.current = {
+      mode: zoomScale > 1 ? 'pan' : 'swipe',
       startX: touch.clientX,
       startY: touch.clientY,
-      cancelled: false,
+      startOffset: zoomOffset,
     };
   };
   const handleTouchMove = (event) => {
-    if (event.touches.length > 1 && touchGesture.current) {
-      touchGesture.current.cancelled = true;
+    const gesture = touchGesture.current;
+    if (event.touches.length > 1) {
+      if (!gesture || gesture.mode !== 'pinch') {
+        touchGesture.current = {
+          mode: 'pinch',
+          startDistance: distanceBetweenTouches(event.touches),
+          startScale: zoomScale,
+          startOffset: zoomOffset,
+        };
+        swiped.current = true;
+        return;
+      }
+      const nextScale = Math.max(
+        1,
+        Math.min(4, gesture.startScale * (distanceBetweenTouches(event.touches) / gesture.startDistance)),
+      );
+      setZoomScale(nextScale);
+      if (nextScale === 1) setZoomOffset({ x: 0, y: 0 });
+      return;
+    }
+    if (!gesture || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    if (gesture.mode === 'pan' && zoomScale > 1) {
+      setZoomOffset({
+        x: gesture.startOffset.x + touch.clientX - gesture.startX,
+        y: gesture.startOffset.y + touch.clientY - gesture.startY,
+      });
       swiped.current = true;
     }
   };
   const handleTouchEnd = (event) => {
     const gesture = touchGesture.current;
-    touchGesture.current = null;
     if (!gesture) return;
-    if (gesture.cancelled) {
+    if (gesture.mode === 'pinch') {
       swiped.current = true;
       clearTimeout(clearSwipeSuppression.current);
       clearSwipeSuppression.current = window.setTimeout(() => { swiped.current = false; }, 700);
+      if (event.touches.length === 1 && zoomScale > 1) {
+        const touch = event.touches[0];
+        touchGesture.current = {
+          mode: 'pan',
+          startX: touch.clientX,
+          startY: touch.clientY,
+          startOffset: zoomOffset,
+        };
+      } else {
+        touchGesture.current = null;
+      }
       return;
     }
-    if (event.changedTouches.length !== 1) return;
+    touchGesture.current = null;
+    if (gesture.mode !== 'swipe' || zoomScale > 1 || event.changedTouches.length !== 1) return;
     const touch = event.changedTouches[0];
     const distanceX = touch.clientX - gesture.startX;
     const distanceY = touch.clientY - gesture.startY;
@@ -147,10 +208,18 @@ export default function ProductDetails() {
   };
   const cancelTouchGesture = () => {
     if (!touchGesture.current) return;
-    touchGesture.current.cancelled = true;
+    touchGesture.current = null;
     swiped.current = true;
     clearTimeout(clearSwipeSuppression.current);
     clearSwipeSuppression.current = window.setTimeout(() => { swiped.current = false; }, 700);
+  };
+  const zoomBy = (amount) => {
+    setGalleryInteracted(true);
+    setZoomScale((current) => {
+      const nextScale = Math.max(1, Math.min(4, current + amount));
+      if (nextScale === 1) setZoomOffset({ x: 0, y: 0 });
+      return nextScale;
+    });
   };
   const openLightbox = () => {
     if (swiped.current) {
@@ -212,7 +281,7 @@ export default function ProductDetails() {
           {images.length > 1 && (
             <div className="mt-3 flex gap-3 overflow-auto">
               {images.map((src, index) => (
-                <button type="button" key={src} className={`h-18 w-18 shrink-0 overflow-hidden rounded-xl border-2 ${image === src ? 'border-brand-dark' : 'border-transparent'}`} onClick={() => { setGalleryInteracted(true); setImage(src); }} aria-label={`Show product image ${index + 1}`}>
+                <button type="button" key={src} className={`h-18 w-18 shrink-0 overflow-hidden rounded-xl border-2 ${image === src ? 'border-brand-dark' : 'border-transparent'}`} onClick={() => { setGalleryInteracted(true); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); setImage(src); }} aria-label={`Show product image ${index + 1}`}>
                   <img src={getProductImageUrl(src)} alt={`${product.name} view ${index + 1}`} className="h-full w-full object-cover" />
                 </button>
               ))}
@@ -299,20 +368,30 @@ export default function ProductDetails() {
           aria-modal="true"
           aria-label={`${product.name} image gallery`}
           className="fixed inset-0 z-[100] grid place-items-center bg-black/95 p-4"
-          onClick={(event) => { if (event.target === event.currentTarget) setLightboxOpen(false); }}
+          onClick={(event) => { if (event.target === event.currentTarget) { setLightboxOpen(false); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); } }}
         >
-          <button type="button" className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={() => setLightboxOpen(false)} aria-label="Close image gallery"><X /></button>
-          {images.length > 1 && <button type="button" className="absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-6" onClick={() => changeImage(-1)} aria-label="Previous product image"><ArrowLeft /></button>}
+          <button type="button" className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={() => { setLightboxOpen(false); setZoomScale(1); setZoomOffset({ x: 0, y: 0 }); }} aria-label="Close image gallery"><X /></button>
+          {images.length > 1 && <button type="button" className="absolute left-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-6" onClick={() => changeImage(-1)} aria-label="Previous product image"><ArrowLeft /></button>}
           <div
-            className="grid max-h-[88vh] max-w-[90vw] touch-pan-y place-items-center"
+            className="grid max-h-[88vh] max-w-[90vw] touch-none place-items-center overflow-hidden"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={cancelTouchGesture}
           >
-            <img src={getProductImageUrl(image)} alt={product.name} className="max-h-[88vh] max-w-[90vw] select-none object-contain" draggable="false" />
+            <img
+              src={getProductImageUrl(image)}
+              alt={product.name}
+              className="max-h-[88vh] max-w-[90vw] select-none object-contain transition-transform duration-100"
+              style={{ transform: `translate(${zoomOffset.x}px, ${zoomOffset.y}px) scale(${zoomScale})` }}
+              draggable="false"
+            />
           </div>
-          {images.length > 1 && <button type="button" className="absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-6" onClick={() => changeImage(1)} aria-label="Next product image"><ArrowRight /></button>}
+          {images.length > 1 && <button type="button" className="absolute right-3 top-1/2 z-10 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-6" onClick={() => changeImage(1)} aria-label="Next product image"><ArrowRight /></button>}
+          <div className="absolute bottom-4 left-4 flex gap-2">
+            <button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl font-bold text-white hover:bg-white/20 disabled:opacity-40" onClick={() => zoomBy(-0.5)} disabled={zoomScale <= 1} aria-label="Zoom out">−</button>
+            <button type="button" className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-xl font-bold text-white hover:bg-white/20 disabled:opacity-40" onClick={() => zoomBy(0.5)} disabled={zoomScale >= 4} aria-label="Zoom in">+</button>
+          </div>
           {images.length > 1 && <p className="absolute bottom-5 text-sm font-bold text-white">{images.indexOf(image) + 1} / {images.length}</p>}
         </div>
       )}

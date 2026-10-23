@@ -5,10 +5,14 @@ const productImage = z.union([
   z.string().regex(/^\/uploads\/products\/[a-f\d-]+\.(?:jpg|png)$/i, 'Invalid uploaded product image'),
 ]);
 const productStringArray = z.array(z.string().trim().min(1).max(100)).max(30);
+const productImageOrderEntry = z.object({
+  type: z.enum(['image', 'upload']),
+  index: z.number().int().min(0).max(11),
+});
 const fields = {
   name: z.string().trim().min(2).max(200), slug, description: z.string().trim().min(10).max(10000), brand: z.string().trim().min(1).max(100), category: objectId,
   bicycleType: z.string().trim().max(100).optional(), condition: z.string().trim().max(100).optional(), price: z.coerce.number().finite().min(0), salePrice: z.coerce.number().finite().min(0).nullable().optional(), stockQuantity: z.coerce.number().int().min(0), sku: z.string().trim().min(1).max(100).transform((v) => v.toUpperCase()),
-  images: z.array(productImage).max(12), specifications: z.record(z.string().max(80), z.string().trim().max(500)), components: z.record(z.string().trim().min(1).max(80), z.string().trim().max(500)), sizes: productStringArray, colors: productStringArray, isAvailable: z.boolean().optional(), isFeatured: z.boolean().optional(),
+  images: z.array(productImage).max(12), imageOrder: z.array(productImageOrderEntry).max(12).optional(), specifications: z.record(z.string().max(80), z.string().trim().max(500)), components: z.record(z.string().trim().min(1).max(80), z.string().trim().max(500)), sizes: productStringArray, colors: productStringArray, isAvailable: z.boolean().optional(), isFeatured: z.boolean().optional(),
 };
 export const productCreateSchema = z.object({
   ...fields,

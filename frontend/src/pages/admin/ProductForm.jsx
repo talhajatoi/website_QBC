@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { ImagePlus, Plus, X } from 'lucide-react';
+import { GripVertical, ImagePlus, Plus, X } from 'lucide-react';
 import { createProduct, getAdminProducts, getProductImageUrl, updateProduct } from '../../services/product.service';
 import { getAdminCategories } from '../../services/category.service';
 import LoadingSpinner from '../../Components/LoadingSpinner';
@@ -35,10 +35,11 @@ export default function ProductForm() {
   const navigate = useNavigate();
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({ defaultValues: { isAvailable: true, isFeatured: false, stockQuantity: 0, sizes: '', colors: '', specifications: '' } });
   const [categories, setCategories] = useState();
-  const [existingImages, setExistingImages] = useState([]);
   const [initialImages, setInitialImages] = useState([]);
-  const [selectedImages, setSelectedImages] = useState([]);
-  const [selectedPreviews, setSelectedPreviews] = useState([]);
+  const [imageItems, setImageItems] = useState([]);
+  const previewUrls = useRef(new Set());
+  const [draggedImageId, setDraggedImageId] = useState(null);
+  const [imageDropActive, setImageDropActive] = useState(false);
   const [specificationRows, setSpecificationRows] = useState(emptySpecifications);
   const [customSpecifications, setCustomSpecifications] = useState([]);
   const [componentRows, setComponentRows] = useState(emptyComponents);
@@ -60,7 +61,11 @@ export default function ProductForm() {
           toast.error('Product not found');
           return;
         }
-        setExistingImages(product.images || []);
+        setImageItems((product.images || []).map((url) => ({
+          id: `existing:${url}`,
+          type: 'existing',
+          url,
+        })));
         setInitialImages(product.images || []);
         const productSpecifications = Object.entries(product.specifications || {});
         const savedValues = new Map(productSpecifications.map(([name, value]) => [name.toLocaleLowerCase(), value]));
@@ -95,15 +100,11 @@ export default function ProductForm() {
       .catch((error) => toast.error(error.message));
   }, [id, editing, reset]);
 
-  useEffect(() => {
-    const previews = selectedImages.map((file) => ({ file, url: URL.createObjectURL(file) }));
-    setSelectedPreviews(previews);
-    return () => previews.forEach(({ url }) => URL.revokeObjectURL(url));
-  }, [selectedImages]);
+  useEffect(() => () => {
+    previewUrls.current.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+  }, []);
 
-  const chooseImages = (event) => {
-    const chosen = Array.from(event.target.files || []);
-    event.target.value = '';
+  const addImages = (chosen) => {
     if (chosen.some((file) => !acceptedImage(file))) {
       toast.error('Choose JPEG, JPG, or PNG images only.');
       return;
@@ -112,12 +113,62 @@ export default function ProductForm() {
       toast.error('Each product image must be 50 MB or smaller.');
       return;
     }
-    const availableSlots = 12 - existingImages.length - selectedImages.length;
+    const availableSlots = 12 - imageItems.length;
     if (chosen.length > availableSlots) {
       toast.error('A product can have up to 12 images.');
       return;
     }
-    setSelectedImages((current) => [...current, ...chosen]);
+    const additions = chosen.map((file) => {
+      const previewUrl = URL.createObjectURL(file);
+      previewUrls.current.add(previewUrl);
+      return {
+        id: `upload:${crypto.randomUUID()}`,
+        type: 'upload',
+        file,
+        previewUrl,
+      };
+    });
+    setImageItems((current) => [
+      ...current,
+      ...additions,
+    ]);
+  };
+
+  const chooseImages = (event) => {
+    addImages(Array.from(event.target.files || []));
+    event.target.value = '';
+  };
+
+  const removeImage = (item) => {
+    if (item.type === 'upload') {
+      URL.revokeObjectURL(item.previewUrl);
+      previewUrls.current.delete(item.previewUrl);
+    }
+    setImageItems((current) => current.filter(({ id }) => id !== item.id));
+  };
+
+  const moveImage = (fromId, toId) => {
+    if (!fromId || fromId === toId) return;
+    setImageItems((current) => {
+      const fromIndex = current.findIndex(({ id }) => id === fromId);
+      const targetIndex = toId ? current.findIndex(({ id }) => id === toId) : current.length;
+      if (fromIndex < 0 || targetIndex < 0) return current;
+      const reordered = [...current];
+      const [moved] = reordered.splice(fromIndex, 1);
+      const toIndex = targetIndex > fromIndex ? targetIndex - 1 : targetIndex;
+      reordered.splice(toIndex, 0, moved);
+      return reordered;
+    });
+  };
+  const dropImages = (event) => {
+    event.preventDefault();
+    setImageDropActive(false);
+    if (draggedImageId) {
+      moveImage(draggedImageId, event.currentTarget.dataset.imageId);
+      setDraggedImageId(null);
+      return;
+    }
+    addImages(Array.from(event.dataTransfer.files || []));
   };
 
   const submit = async (values) => {
@@ -170,18 +221,21 @@ export default function ProductForm() {
       usedComponentNames.add(normalizedName);
       components[name] = value;
     }
+    const orderedExistingImages = imageItems.filter((item) => item.type === 'existing').map((item) => item.url);
+    const orderedUploads = imageItems.filter((item) => item.type === 'upload');
+    const imageOrder = imageItems.map((item) => item.type === 'existing'
+      ? { type: 'image', index: orderedExistingImages.indexOf(item.url) }
+      : { type: 'upload', index: orderedUploads.findIndex((upload) => upload.id === item.id) });
+    const imagesChanged = imageItems.length !== initialImages.length ||
+      imageItems.some((item, index) => item.type !== 'existing' || item.url !== initialImages[index]);
     const payload = {
       ...values,
       slug: values.slug || slugify(values.name),
       price: Number(values.price),
       salePrice: values.salePrice === '' ? null : Number(values.salePrice),
       stockQuantity: Number(values.stockQuantity),
-      images: [...existingImages],
-      ...(editing && existingImages.length === initialImages.length &&
-        existingImages.every((imageUrl, index) => imageUrl === initialImages[index])
-        ? { images: undefined }
-        : {}),
-      productImages: selectedImages,
+      ...(editing && !imagesChanged ? {} : { images: orderedExistingImages, imageOrder }),
+      productImages: orderedUploads.map((item) => item.file),
       sizes: split(values.sizes),
       colors: split(values.colors),
       specifications,
@@ -260,18 +314,46 @@ export default function ProductForm() {
       </div>
       <div className="field mt-6">
         <span>Product images <span className="font-normal text-zinc-400">(JPEG, JPG, or PNG · up to 50 MB each · maximum 12 images)</span></span>
-        <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-zinc-300 p-4 text-sm font-bold hover:border-zinc-600">
-          <ImagePlus className="h-5 w-5" />Choose product images
-          <input className="sr-only" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple onChange={chooseImages} />
-        </label>
-        {(existingImages.length > 0 || selectedPreviews.length > 0) && <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {existingImages.map((imageUrl, index) => <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100" key={imageUrl}>
-            <img className="h-full w-full object-cover" src={getProductImageUrl(imageUrl)} alt={`Product image ${index + 1}`} />
-            <button className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-900 shadow" type="button" aria-label={`Remove product image ${index + 1}`} onClick={() => setExistingImages((images) => images.filter((item) => item !== imageUrl))}><X className="h-4 w-4" /></button>
-          </div>)}
-          {selectedPreviews.map(({ file, url }, index) => <div className="relative aspect-square overflow-hidden rounded-xl bg-zinc-100" key={`${file.name}-${file.lastModified}-${index}`}>
-            <img className="h-full w-full object-cover" src={url} alt={`New product image ${existingImages.length + index + 1}`} />
-            <button className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-900 shadow" type="button" aria-label={`Remove selected product image ${index + 1}`} onClick={() => setSelectedImages((images) => images.filter((item) => item !== file))}><X className="h-4 w-4" /></button>
+        <div
+          className={`mt-2 rounded-xl border border-dashed p-4 text-sm transition ${imageDropActive ? 'border-brand-dark bg-yellow-50' : 'border-zinc-300'}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            if (!draggedImageId) setImageDropActive(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget)) setImageDropActive(false);
+          }}
+          onDrop={dropImages}
+        >
+          <label className="flex cursor-pointer items-center justify-center gap-3 font-bold">
+            <ImagePlus className="h-5 w-5" />
+            Choose images or drag and drop them here
+            <input className="sr-only" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple onChange={chooseImages} />
+          </label>
+          <p className="mt-1 text-center text-xs text-zinc-500">JPEG, JPG, or PNG · up to 50 MB each · maximum 12 images</p>
+        </div>
+        {imageItems.length > 0 && <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {imageItems.map((item, index) => <div
+            className={`relative aspect-square overflow-hidden rounded-xl bg-zinc-100 ${draggedImageId === item.id ? 'opacity-40' : ''}`}
+            key={item.id}
+            data-image-id={item.id}
+            draggable
+            onDragStart={(event) => {
+              setDraggedImageId(item.id);
+              event.dataTransfer.effectAllowed = 'move';
+              event.dataTransfer.setData('text/plain', item.id);
+            }}
+            onDragEnd={() => setDraggedImageId(null)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.stopPropagation();
+              dropImages(event);
+            }}
+          >
+            <img className="h-full w-full object-cover" src={item.type === 'existing' ? getProductImageUrl(item.url) : item.previewUrl} alt={`Product image ${index + 1}`} />
+            {index === 0 && <span className="absolute bottom-2 left-2 rounded-md bg-zinc-950/85 px-2 py-1 text-xs font-black text-white">Main image</span>}
+            <span className="absolute left-2 top-2 grid h-8 w-8 cursor-grab place-items-center rounded-full bg-white/90 text-zinc-900 shadow" aria-label={`Drag to reorder image ${index + 1}`} title="Drag to reorder"><GripVertical className="h-4 w-4" /></span>
+            <button className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-zinc-900 shadow" type="button" aria-label={`Remove product image ${index + 1}`} onClick={() => removeImage(item)}><X className="h-4 w-4" /></button>
           </div>)}
         </div>}
       </div>

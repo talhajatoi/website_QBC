@@ -227,6 +227,12 @@ describe('catalogue and review management', () => {
     expect(detailOnlyUpdate.body.data.product.specifications).toMatchObject(payload.specifications);
     expect(detailOnlyUpdate.body.data.product.components).toMatchObject(payload.components);
     expect((await request(app).get(imagePaths[0])).status).toBe(200);
+    const reordered = await request(app).patch(`/api/admin/products/${created.body.data.product._id}`)
+      .set(authHeader(token))
+      .field('images', JSON.stringify(imagePaths))
+      .field('imageOrder', JSON.stringify([{ type: 'image', index: 1 }, { type: 'image', index: 0 }]));
+    expect(reordered.status).toBe(200);
+    expect(reordered.body.data.product.images).toEqual([imagePaths[1], imagePaths[0]]);
     const changed = await request(app).patch(`/api/admin/products/${created.body.data.product._id}`).set(authHeader(token)).send({ salePrice: 40000, condition: 'Used' });
     expect(changed.body.data.product.salePrice).toBe(40000);
     expect(changed.body.data.product.condition).toBe('Used');

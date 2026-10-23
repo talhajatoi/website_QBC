@@ -1,5 +1,6 @@
 import { ExternalLink, Mail, MapPin, MessageCircle, Phone, Store } from 'lucide-react';
 import { useBusiness } from '../hooks/useBusiness';
+import SocialIcon from '../Components/SocialIcon';
 
 const socialNames = {
   facebook: 'Facebook',
@@ -87,7 +88,7 @@ export default function Contact() {
             )}
             {socials.map(([platform, url]) => (
               <a key={platform} className="flex min-w-0 items-center gap-3 rounded-2xl border border-zinc-200 p-4 font-bold transition hover:border-zinc-400" href={url} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-5 w-5 shrink-0 text-brand-dark" />
+                <SocialIcon platform={platform} className="h-6 w-6 shrink-0 text-brand-dark" />
                 <span className="min-w-0"><span className="block text-xs font-semibold text-zinc-500">Social media</span><span className="block break-all">{socialNames[platform]}</span></span>
               </a>
             ))}

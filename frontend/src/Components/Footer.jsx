@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useBusiness } from '../hooks/useBusiness';
+import { Mail, MapPin, Phone } from 'lucide-react';
+import SocialIcon from './SocialIcon';
 
 const socialNames = {
   facebook: 'Facebook',
@@ -31,24 +33,38 @@ export default function Footer() {
             <Link to="/categories">Categories</Link>
             <Link to="/about">About us</Link>
           </div>
+        </div>
+        <div>
+          <h3 className="site-footer-heading font-black uppercase tracking-wider">Need help?</h3>
+          <div className="mt-4 grid gap-3 text-sm text-zinc-300">
+            {business?.contactPhone && <a className="flex items-center gap-2 hover:text-brand" href={`tel:${business.contactPhone}`}><Phone className="h-4 w-4 shrink-0" />{business.contactPhone}</a>}
+            {business?.contactEmail && <a className="flex min-w-0 items-center gap-2 break-all hover:text-brand" href={`mailto:${business.contactEmail}`}><Mail className="h-4 w-4 shrink-0" />{business.contactEmail}</a>}
+            {business?.address && <Link className="flex items-center gap-2 hover:text-brand" to="/contact"><MapPin className="h-4 w-4 shrink-0" />Visit us</Link>}
+          </div>
           {socialLinks.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-4 text-sm text-zinc-300">
+            <div className="mt-5 flex flex-wrap gap-3">
               {socialLinks.map(([platform, url]) => (
-                <a key={platform} href={url} target="_blank" rel="noreferrer">
-                  {socialNames[platform]}
+                <a
+                  key={platform}
+                  className="grid h-10 w-10 place-items-center rounded-full border border-zinc-700 text-zinc-300 transition hover:border-brand hover:text-brand"
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={socialNames[platform]}
+                  title={socialNames[platform]}
+                >
+                  <SocialIcon platform={platform} className="h-5 w-5" />
                 </a>
               ))}
             </div>
           )}
-        </div>
-        <div>
-          <h3 className="site-footer-heading font-black uppercase tracking-wider">Need help?</h3>
-          <p className="mt-3 text-sm leading-6 text-zinc-400">
-            Create an order online, then confirm it manually on WhatsApp. Your order remains pending until the store confirms it.
-          </p>
-          <div className="mt-3 grid gap-2 text-sm text-zinc-300">
-            {business?.contactPhone && <a href={`tel:${business.contactPhone}`}>{business.contactPhone}</a>}
-            {business?.contactEmail && <a href={`mailto:${business.contactEmail}`}>{business.contactEmail}</a>}
+          {!business?.contactPhone && !business?.contactEmail && !socialLinks.length && (
+            <p className="mt-3 text-sm leading-6 text-zinc-400">
+              Contact details will be available soon.
+            </p>
+          )}
+          <div className="mt-4">
+            <Link className="text-sm font-bold text-brand hover:underline" to="/contact">All contact details</Link>
           </div>
         </div>
       </div>

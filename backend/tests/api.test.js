@@ -343,5 +343,22 @@ describe('cart, checkout, and order authorization', () => {
     const filteredOrders = await request(app).get('/api/admin/orders?status=cancelled').set(authHeader(token));
     expect(filteredOrders.body.data.orders.map((order) => order._id)).toContain(storedOrder.id);
   });
+  it('allows an admin to delete an unshipped order and restores its reserved stock', async () => {
+    const category = await createCategory();
+    const product = await createProduct(category, { stockQuantity: 5 });
+    const created = await request(app).post('/api/orders').send({
+      customer: { name: 'Ali Khan', whatsapp: '+923001234567', address: 'House 1, Main Road, Quetta' },
+      items: [{ productId: product.id, quantity: 2, selectedOptions: { size: 'M', color: 'Black' } }],
+    });
+    const order = await Order.findOne({ orderNumber: created.body.data.order.orderNumber });
+    expect((await Product.findById(product.id)).stockQuantity).toBe(3);
+
+    const deleted = await request(app).delete(`/api/admin/orders/${order.id}`).set(authHeader(token));
+
+    expect(deleted.status).toBe(200);
+    expect((await Order.findById(order.id))).toBeNull();
+    expect((await Product.findById(product.id)).stockQuantity).toBe(5);
+    expect((await request(app).delete(`/api/admin/orders/${order.id}`).set(authHeader(token))).status).toBe(404);
+  });
   it('rejects invalid order state changes', async () => { const category = await createCategory(); const product = await createProduct(category); const order = await Order.create({ orderNumber: 'QB-2026-STATE01', accessTokenHash: 'a'.repeat(64), customer: { name: 'Test', whatsapp: '923001234567', address: 'A sufficiently descriptive test address' }, items: [{ product: product._id, name: product.name, sku: product.sku, quantity: 1, unitPrice: product.price, lineTotal: product.price, selectedOptions: {} }], subtotal: product.price, deliveryCharge: 0, grandTotal: product.price }); const response = await request(app).patch(`/api/admin/orders/${order.id}/status`).set(authHeader(token)).send({ status: 'shipped' }); expect(response.status).toBe(422); });
 });

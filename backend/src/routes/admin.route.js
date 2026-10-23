@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { dashboardSummary } from '../controllers/admin.controller.js';
 import { updateBusinessSettings } from '../controllers/business-settings.controller.js';
 import { createCategory, deleteCategory, listCategories, updateCategory } from '../controllers/category.controller.js';
-import { adminOrder, adminOrders, updateAdvancePaymentStatus, updateNotes, updateOrderStatus, updatePaymentStatus } from '../controllers/order.controller.js';
+import { adminOrder, adminOrders, deleteAdminOrder, updateAdvancePaymentStatus, updateNotes, updateOrderStatus, updatePaymentStatus } from '../controllers/order.controller.js';
 import { createProduct, deleteProduct, listAdminProducts, updateProduct, updateStock } from '../controllers/product.controller.js';
 import { adminReviews, createReview, deleteReview, updateReview } from '../controllers/review.controller.js';
 import { requireAdmin } from '../middleware/admin.middleware.js';
@@ -73,6 +73,7 @@ router.patch('/reviews/:reviewId', ...uploadReviewImage, validateReviewBody(revi
 router.delete('/reviews/:reviewId', deleteReview);
 router.get('/orders', validate(orderQuerySchema, 'query'), adminOrders);
 router.get('/orders/:id', adminOrder);
+router.delete('/orders/:id', deleteAdminOrder);
 router.patch('/orders/:id/status', validate(orderStatusSchema), updateOrderStatus);
 router.patch('/orders/:id/payment-status', validate(paymentStatusSchema), updatePaymentStatus);
 router.patch('/orders/:id/advance-payment-status', validate(advancePaymentStatusSchema), updateAdvancePaymentStatus);

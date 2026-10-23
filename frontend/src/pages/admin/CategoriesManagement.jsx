@@ -178,30 +178,35 @@ export default function CategoriesManagement() {
         <div className="mt-8 grid gap-4">
           {categories.map((c) => (
             <article
-              className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-5 shadow-sm"
+              className="flex items-start gap-3 rounded-2xl bg-white p-4 shadow-sm sm:items-center sm:p-5"
               key={c._id}
             >
-              <div className="flex min-w-0 items-center gap-4">
+              <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
                 {c.imageUrl && (
                   <img
-                    className="h-14 w-20 rounded-lg object-cover"
+                    className="h-12 w-16 shrink-0 rounded-lg object-cover sm:h-14 sm:w-20"
                     src={getCategoryImageUrl(c.imageUrl)}
                     alt=""
                   />
                 )}
-                <div>
-                  <h2 className="font-black">{c.name}</h2>
-                  <p className="text-sm text-zinc-500">
+                <div className="min-w-0">
+                  <h2 className="break-words font-black">{c.name}</h2>
+                  <p className="break-all text-sm text-zinc-500">
                     /{c.slug} · {c.isActive ? "Active" : "Inactive"}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button className="btn-icon" onClick={() => open(c)}>
+              <div className="ml-auto flex shrink-0 gap-2">
+                <button
+                  className="btn-icon"
+                  aria-label={`Edit ${c.name}`}
+                  onClick={() => open(c)}
+                >
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
                   className="btn-icon text-red-600"
+                  aria-label={`Delete ${c.name}`}
                   onClick={() => remove(c)}
                 >
                   <Trash2 className="h-4 w-4" />

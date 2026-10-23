@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Trash2 } from "lucide-react";
 import {
+  deleteAdminOrder,
   getAdminOrder,
   updateAdvancePaymentStatus,
   updateOrderNotes,
@@ -25,8 +26,10 @@ const orderStatuses = [
 const payments = ["unpaid", "pending", "paid", "refunded", "failed"];
 export default function OrderDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState();
   const [notes, setNotes] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const load = useCallback(
     () =>
       getAdminOrder(id)
@@ -49,6 +52,18 @@ export default function OrderDetails() {
       toast.error(error.message);
     }
   };
+  const remove = async () => {
+    if (!window.confirm(`Permanently delete order ${order.orderNumber}? Stock will be restored if it has not shipped.`)) return;
+    try {
+      setDeleting(true);
+      await deleteAdminOrder(id);
+      toast.success("Order deleted");
+      navigate("/admin/orders");
+    } catch (error) {
+      toast.error(error.message);
+      setDeleting(false);
+    }
+  };
   if (!order) return <LoadingSpinner label="Loading order" />;
   return (
     <>
@@ -63,15 +78,21 @@ export default function OrderDetails() {
             Created {formatDate(order.createdAt)}
           </p>
         </div>
-        <a
-          className="btn-secondary"
-          href={`https://wa.me/${order.customer.whatsapp.replace(/\D/g, "")}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <ExternalLink className="h-4 w-4" />
-          WhatsApp customer
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a
+            className="btn-secondary"
+            href={`https://wa.me/${order.customer.whatsapp.replace(/\D/g, "")}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" />
+            WhatsApp customer
+          </a>
+          <button className="btn-secondary text-red-600" disabled={deleting} onClick={remove}>
+            <Trash2 className="h-4 w-4" />
+            Delete order
+          </button>
+        </div>
       </div>
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="rounded-3xl bg-white p-6 shadow-sm">

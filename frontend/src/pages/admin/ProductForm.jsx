@@ -36,6 +36,7 @@ export default function ProductForm() {
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({ defaultValues: { isAvailable: true, isFeatured: false, stockQuantity: 0, sizes: '', colors: '', specifications: '' } });
   const [categories, setCategories] = useState();
   const [existingImages, setExistingImages] = useState([]);
+  const [initialImages, setInitialImages] = useState([]);
   const [selectedImages, setSelectedImages] = useState([]);
   const [selectedPreviews, setSelectedPreviews] = useState([]);
   const [specificationRows, setSpecificationRows] = useState(emptySpecifications);
@@ -60,6 +61,7 @@ export default function ProductForm() {
           return;
         }
         setExistingImages(product.images || []);
+        setInitialImages(product.images || []);
         const productSpecifications = Object.entries(product.specifications || {});
         const savedValues = new Map(productSpecifications.map(([name, value]) => [name.toLocaleLowerCase(), value]));
         setSpecificationRows(specificationNames.map((name) => ({
@@ -175,6 +177,10 @@ export default function ProductForm() {
       salePrice: values.salePrice === '' ? null : Number(values.salePrice),
       stockQuantity: Number(values.stockQuantity),
       images: [...existingImages],
+      ...(editing && existingImages.length === initialImages.length &&
+        existingImages.every((imageUrl, index) => imageUrl === initialImages[index])
+        ? { images: undefined }
+        : {}),
       productImages: selectedImages,
       sizes: split(values.sizes),
       colors: split(values.colors),

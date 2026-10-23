@@ -200,7 +200,7 @@ describe('catalogue and review management', () => {
   });
   it('creates, lists, updates, and deletes products with uploaded JPEG and PNG images', async () => {
     const category = await createCategory();
-    const payload = { name: 'City Rider', slug: 'city-rider', description: 'Comfortable commuter bicycle with durable parts.', brand: 'Quetta', category: category.id, bicycleType: 'City', price: 45000, stockQuantity: 7, sku: 'CITY-001', sizes: ['M'], colors: ['Yellow'], components: { Stem: 'Alloy', Wheels: '700c', 'Custom crankset': 'Shimano' } };
+    const payload = { name: 'City Rider', slug: 'city-rider', description: 'Comfortable commuter bicycle with durable parts.', brand: 'Quetta', category: category.id, bicycleType: 'City', price: 45000, stockQuantity: 7, sku: 'CITY-001', sizes: ['M'], colors: ['Yellow'], specifications: { Material: 'Aluminum' }, components: { Stem: 'Alloy', Wheels: '700c', 'Custom crankset': 'Shimano' } };
     const created = await request(app).post('/api/admin/products').set(authHeader(token)).send(payload);
     expect(created.body.data.product.components).toMatchObject(payload.components);
     const listed = await request(app).get('/api/products?sort=price_asc');
@@ -218,6 +218,15 @@ describe('catalogue and review management', () => {
     expect(productImageResponse.status).toBe(200);
     expect(productImageResponse.headers['cross-origin-resource-policy']).toBe('cross-origin');
     expect((await request(app).get(imagePaths[1])).status).toBe(200);
+    const detailOnlyUpdate = await request(app).patch(`/api/admin/products/${created.body.data.product._id}`)
+      .set(authHeader(token))
+      .field('description', 'Updated product description while keeping the saved images.')
+      .field('price', '46000');
+    expect(detailOnlyUpdate.status).toBe(200);
+    expect(detailOnlyUpdate.body.data.product.images).toEqual(imagePaths);
+    expect(detailOnlyUpdate.body.data.product.specifications).toMatchObject(payload.specifications);
+    expect(detailOnlyUpdate.body.data.product.components).toMatchObject(payload.components);
+    expect((await request(app).get(imagePaths[0])).status).toBe(200);
     const changed = await request(app).patch(`/api/admin/products/${created.body.data.product._id}`).set(authHeader(token)).send({ salePrice: 40000, condition: 'Used' });
     expect(changed.body.data.product.salePrice).toBe(40000);
     expect(changed.body.data.product.condition).toBe('Used');

@@ -29,8 +29,9 @@ export default function ProductDetails() {
   const [galleryInteracted, setGalleryInteracted] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [error, setError] = useState('');
-  const touchStartX = useRef(null);
+  const touchGesture = useRef(null);
   const swiped = useRef(false);
+  const clearSwipeSuppression = useRef(null);
   const images = product?.images?.length ? product.images : [fallbackImage];
 
   useEffect(() => {
@@ -107,16 +108,49 @@ export default function ProductDetails() {
   };
   const handleTouchStart = (event) => {
     setGalleryInteracted(true);
-    touchStartX.current = event.changedTouches[0].clientX;
+    if (event.touches.length !== 1) {
+      touchGesture.current = { cancelled: true };
+      return;
+    }
+    const touch = event.touches[0];
+    touchGesture.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      cancelled: false,
+    };
+  };
+  const handleTouchMove = (event) => {
+    if (event.touches.length > 1 && touchGesture.current) {
+      touchGesture.current.cancelled = true;
+      swiped.current = true;
+    }
   };
   const handleTouchEnd = (event) => {
-    if (touchStartX.current === null) return;
-    const distance = event.changedTouches[0].clientX - touchStartX.current;
-    touchStartX.current = null;
-    if (Math.abs(distance) < 45) return;
+    const gesture = touchGesture.current;
+    touchGesture.current = null;
+    if (!gesture) return;
+    if (gesture.cancelled) {
+      swiped.current = true;
+      clearTimeout(clearSwipeSuppression.current);
+      clearSwipeSuppression.current = window.setTimeout(() => { swiped.current = false; }, 700);
+      return;
+    }
+    if (event.changedTouches.length !== 1) return;
+    const touch = event.changedTouches[0];
+    const distanceX = touch.clientX - gesture.startX;
+    const distanceY = touch.clientY - gesture.startY;
+    if (Math.abs(distanceX) < 45 || Math.abs(distanceX) <= Math.abs(distanceY) * 1.2) return;
     swiped.current = true;
-    changeImage(distance < 0 ? 1 : -1);
-    window.setTimeout(() => { swiped.current = false; }, 500);
+    changeImage(distanceX < 0 ? 1 : -1);
+    clearTimeout(clearSwipeSuppression.current);
+    clearSwipeSuppression.current = window.setTimeout(() => { swiped.current = false; }, 700);
+  };
+  const cancelTouchGesture = () => {
+    if (!touchGesture.current) return;
+    touchGesture.current.cancelled = true;
+    swiped.current = true;
+    clearTimeout(clearSwipeSuppression.current);
+    clearSwipeSuppression.current = window.setTimeout(() => { swiped.current = false; }, 700);
   };
   const openLightbox = () => {
     if (swiped.current) {
@@ -153,8 +187,11 @@ export default function ProductDetails() {
               type="button"
               className="h-full w-full cursor-zoom-in touch-pan-y"
               onClick={openLightbox}
+              onPointerEnter={() => setGalleryInteracted(true)}
               onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onTouchCancel={cancelTouchGesture}
               aria-label={`Open ${product.name} image gallery`}
             >
               <img
@@ -220,14 +257,16 @@ export default function ProductDetails() {
           {specifications.length > 0 && (
             <>
               <h2 className="section-title text-3xl">Specifications</h2>
-              <dl className="mt-5 overflow-hidden rounded-2xl border border-zinc-200">
-                {specifications.map(([key, value]) => (
-                  <div className="grid grid-cols-2 border-b border-zinc-100 p-4 last:border-0" key={key}>
-                    <dt className="font-bold capitalize">{key}</dt>
-                    <dd className="text-zinc-600">{value}</dd>
-                  </div>
-                ))}
-              </dl>
+              <div className="@container mt-4">
+                <dl className="grid grid-cols-1 gap-2 @md:grid-cols-2">
+                  {specifications.map(([key, value]) => (
+                    <div className="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm" key={key}>
+                      <dt className="break-words font-bold capitalize leading-5">{key}</dt>
+                      <dd className="break-words leading-5 text-zinc-600">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
             </>
           )}
           <h2 className="mt-12 section-title text-3xl">All reviews</h2>
@@ -261,12 +300,18 @@ export default function ProductDetails() {
           aria-label={`${product.name} image gallery`}
           className="fixed inset-0 z-[100] grid place-items-center bg-black/95 p-4"
           onClick={(event) => { if (event.target === event.currentTarget) setLightboxOpen(false); }}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
         >
           <button type="button" className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" onClick={() => setLightboxOpen(false)} aria-label="Close image gallery"><X /></button>
           {images.length > 1 && <button type="button" className="absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:left-6" onClick={() => changeImage(-1)} aria-label="Previous product image"><ArrowLeft /></button>}
-          <img src={getProductImageUrl(image)} alt={product.name} className="max-h-[88vh] max-w-[90vw] select-none object-contain" draggable="false" />
+          <div
+            className="grid max-h-[88vh] max-w-[90vw] touch-pan-y place-items-center"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={cancelTouchGesture}
+          >
+            <img src={getProductImageUrl(image)} alt={product.name} className="max-h-[88vh] max-w-[90vw] select-none object-contain" draggable="false" />
+          </div>
           {images.length > 1 && <button type="button" className="absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 sm:right-6" onClick={() => changeImage(1)} aria-label="Next product image"><ArrowRight /></button>}
           {images.length > 1 && <p className="absolute bottom-5 text-sm font-bold text-white">{images.indexOf(image) + 1} / {images.length}</p>}
         </div>

@@ -11,15 +11,18 @@ const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const uploadsDirectory = path.resolve(
   env.UPLOADS_DIR || path.resolve(sourceDirectory, "../../uploads"),
 );
-console.log("UPLOADS_DIR environment variable:", env.UPLOADS_DIR);
-console.log("Resolved uploads directory:", uploadsDirectory);
-console.log("Product images directory:", productDirectory);
 const reviewDirectory = path.join(uploadsDirectory, "reviews");
 const productDirectory = path.join(uploadsDirectory, "products");
 const categoryDirectory = path.join(uploadsDirectory, "categories");
 fs.mkdirSync(reviewDirectory, { recursive: true });
 fs.mkdirSync(productDirectory, { recursive: true });
 fs.mkdirSync(categoryDirectory, { recursive: true });
+
+export const uploadDirectories = Object.freeze({
+  products: productDirectory,
+  reviews: reviewDirectory,
+  categories: categoryDirectory,
+});
 
 const storage = multer.diskStorage({
   destination: (req, file, callback) => callback(null, reviewDirectory),
@@ -53,6 +56,10 @@ export const uploadReviewImage = [
         );
       }
       req.file.publicUrl = `/uploads/reviews/${req.file.filename}`;
+      console.info("Review image uploaded:", {
+        path: req.file.path,
+        publicUrl: req.file.publicUrl,
+      });
       return next();
     } catch (error) {
       await fs.promises.unlink(req.file.path).catch(() => {});
@@ -104,6 +111,10 @@ export const uploadProductImages = [
         file.path = newPath;
         file.filename = filename;
         file.publicUrl = `/uploads/products/${filename}`;
+        console.info("Product image uploaded:", {
+          path: file.path,
+          publicUrl: file.publicUrl,
+        });
       }
       return next();
     } catch (error) {
@@ -154,6 +165,10 @@ export const uploadCategoryImage = [
       req.file.path = newPath;
       req.file.filename = filename;
       req.file.publicUrl = `/uploads/categories/${filename}`;
+      console.info("Category image uploaded:", {
+        path: req.file.path,
+        publicUrl: req.file.publicUrl,
+      });
       return next();
     } catch (error) {
       await removeUploadedFile(req.file);

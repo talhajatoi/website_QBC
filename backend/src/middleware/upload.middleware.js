@@ -11,6 +11,9 @@ const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const uploadsDirectory = path.resolve(
   env.UPLOADS_DIR || path.resolve(sourceDirectory, "../../uploads"),
 );
+console.log("UPLOADS_DIR environment variable:", env.UPLOADS_DIR);
+console.log("Resolved uploads directory:", uploadsDirectory);
+console.log("Product images directory:", productDirectory);
 const reviewDirectory = path.join(uploadsDirectory, "reviews");
 const productDirectory = path.join(uploadsDirectory, "products");
 const categoryDirectory = path.join(uploadsDirectory, "categories");

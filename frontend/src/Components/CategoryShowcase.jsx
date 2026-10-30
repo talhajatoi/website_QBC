@@ -80,8 +80,6 @@ export default function CategoryShowcase({ category }) {
         <h3 className="text-2xl font-black">{category.name}</h3>
         {(active || category.description) && <p className="mt-1 line-clamp-2 text-sm font-semibold text-zinc-200">{active ? (loading ? 'Finding your next ride…' : product?.name || (error ? 'Products could not be loaded' : 'Explore this collection')) : category.description}</p>}
       </div>
-      {active && products.length > 1 && <span className="shrink-0 rounded-full bg-brand px-3 py-1 text-xs font-black text-zinc-950">{index + 1} / {products.length}</span>}
     </div>
-    {active && products.length > 1 && <span className="category-showcase__progress" key={`${category._id}-${index}`} />}
   </Link>;
 }

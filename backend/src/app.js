@@ -29,6 +29,7 @@ app.use(
       "X-Cart-Token",
       "X-Order-Access-Token",
     ],
+    exposedHeaders: ["X-Admin-Token"],
     origin(origin, callback) {
       if (!origin || env.allowedOrigins.includes(origin))
         return callback(null, true);

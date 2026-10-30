@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Bike, MessageCircle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bike, MessageCircle, ShieldCheck } from "lucide-react";
 import { getCategories } from "../services/category.service";
 import { getFeaturedProducts } from "../services/product.service";
 import ProductCard from "../Components/ProductCard";
@@ -15,6 +15,28 @@ export default function Home() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const categoryRailRef = useRef(null);
+  const categoryControlsTimer = useRef(null);
+  const [categoryControlsVisible, setCategoryControlsVisible] = useState(false);
+
+  const showCategoryControls = () => {
+    setCategoryControlsVisible(true);
+    window.clearTimeout(categoryControlsTimer.current);
+    categoryControlsTimer.current = window.setTimeout(
+      () => setCategoryControlsVisible(false),
+      1800,
+    );
+  };
+
+  const scrollCategories = (direction) => {
+    const rail = categoryRailRef.current;
+    if (!rail) return;
+    showCategoryControls();
+    rail.scrollBy({ left: rail.clientWidth * 0.8 * direction, behavior: "smooth" });
+  };
+
+  useEffect(() => () => window.clearTimeout(categoryControlsTimer.current), []);
+
   useEffect(() => {
     Promise.all([getCategories(), getFeaturedProducts()])
       .then(([c, p]) => {
@@ -71,10 +93,51 @@ export default function Home() {
         {loading ? (
           <LoadingSpinner />
         ) : categories.length ? (
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.slice(0, 6).map((category) => (
-              <CategoryShowcase key={category._id} category={category} />
-            ))}
+          <div className="group/category-rail relative mt-8">
+            <div
+              ref={categoryRailRef}
+              className={`category-rail flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3 ${categoryControlsVisible ? "category-rail--active" : ""}`}
+              role="region"
+              aria-label="Browse bicycle categories"
+              tabIndex={0}
+              onPointerEnter={showCategoryControls}
+              onPointerMove={showCategoryControls}
+              onPointerLeave={showCategoryControls}
+              onTouchStart={showCategoryControls}
+              onScroll={showCategoryControls}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+                event.preventDefault();
+                scrollCategories(event.key === "ArrowRight" ? 1 : -1);
+              }}
+            >
+              {categories.map((category) => (
+                <div
+                  className="w-[82%] shrink-0 snap-start sm:w-[48%] lg:w-[32%]"
+                  key={category._id}
+                >
+                  <CategoryShowcase category={category} />
+                </div>
+              ))}
+            </div>
+            {categories.length > 1 && <>
+              <button
+                type="button"
+                className={`category-rail__arrow left-2 ${categoryControlsVisible ? "category-rail__arrow--visible" : ""}`}
+                aria-label="Scroll categories left"
+                onClick={() => scrollCategories(-1)}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                className={`category-rail__arrow right-2 ${categoryControlsVisible ? "category-rail__arrow--visible" : ""}`}
+                aria-label="Scroll categories right"
+                onClick={() => scrollCategories(1)}
+              >
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </>}
           </div>
         ) : (
           <EmptyState

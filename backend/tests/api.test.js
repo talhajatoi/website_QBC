@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
 import app from '../src/app.js';
 import { connectDatabase, disconnectDatabase } from '../src/config/db.js';
 import { Admin } from '../src/models/admin.model.js';
@@ -37,6 +38,7 @@ describe('platform basics and authentication', () => {
       expect(preflight.headers['access-control-allow-methods']).toContain('POST');
       expect(preflight.headers['access-control-allow-headers'].toLowerCase()).toContain('authorization');
       expect(preflight.headers['access-control-allow-headers'].toLowerCase()).toContain('content-type');
+      expect(preflight.headers['access-control-expose-headers'].toLowerCase()).toContain('x-admin-token');
     }
     const blockedPreflight = await request(app).options('/api/auth/login')
       .set('Origin', 'https://untrusted.example')
@@ -55,6 +57,25 @@ describe('platform basics and authentication', () => {
   });
   it('surfaces a database connection failure and can reconnect to the isolated database', async () => { await disconnectDatabase(); await expect(connectDatabase('mongodb://127.0.0.1:1/unreachable', { serverSelectionTimeoutMS: 100 })).rejects.toThrow(); await connectDatabase(process.env.MONGODB_URI); expect(mongoose.connection.readyState).toBe(1); });
   it('rejects invalid credentials and blocks anonymous admin calls', async () => { const invalid = await request(app).post('/api/auth/login').send({ email: adminCredentials.email, password: 'wrong' }); const denied = await request(app).get('/api/admin/products'); expect(invalid.status).toBe(401); expect(invalid.body.message).toBe('Invalid email or password'); expect(denied.status).toBe(401); });
+  it('renews an active administrator token shortly before expiration', async () => {
+    const expiringToken = jwt.sign(
+      { sub: testAdminId.toString(), role: 'admin' },
+      env.JWT_SECRET,
+      { expiresIn: 120, issuer: 'quetta-bicycles-api', audience: 'quetta-bicycles-admin' },
+    );
+    const response = await request(app).get('/api/admin/products').set(authHeader(expiringToken));
+    const renewedToken = response.headers['x-admin-token'];
+
+    expect(response.status).toBe(200);
+    expect(renewedToken).toBeTruthy();
+    expect(jwt.verify(renewedToken, env.JWT_SECRET, {
+      issuer: 'quetta-bicycles-api',
+      audience: 'quetta-bicycles-admin',
+    }).exp).toBeGreaterThan(jwt.verify(expiringToken, env.JWT_SECRET, {
+      issuer: 'quetta-bicycles-api',
+      audience: 'quetta-bicycles-admin',
+    }).exp);
+  });
   it('serves public store details and protects store-setting updates', async () => {
     const initial = await request(app).get('/api/business');
     expect(initial.status).toBe(200);
@@ -317,7 +338,7 @@ describe('catalogue and review management', () => {
 
 describe('cart, checkout, and order authorization', () => {
   it('calculates a cart server-side and rejects excessive stock', async () => { const category = await createCategory(); const product = await createProduct(category, { price: 1000, stockQuantity: 2 }); const added = await request(app).post('/api/cart/items').send({ productId: product.id, quantity: 2, selectedOptions: { size: 'M', color: 'Black' } }); const invalid = await request(app).post('/api/cart/items').send({ productId: product.id, quantity: 3 }); expect(added.status).toBe(201); expect(added.body.data.cart.total).toBe(2000); expect(added.body.data.cartToken).toMatch(/^[a-f0-9]{64}$/); expect(invalid.status).toBe(422); });
-  it('creates orders with COD advances and returns bank transfer details when selected', async () => { const category = await createCategory(); const product = await createProduct(category, { price: 3000, stockQuantity: 3 }); const payload = { customer: { name: 'Ali Khan', whatsapp: '+923001234567', address: 'House 1, Main Road, Quetta' }, items: [{ productId: product.id, quantity: 2, selectedOptions: { size: 'M', color: 'Black' } }], customerNotes: 'Please call first.' }; const created = await request(app).post('/api/orders').set('Idempotency-Key', 'abcdefghijklmno123').send(payload); const denied = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`); const allowed = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`).set('X-Order-Access-Token', created.body.data.orderAccessToken); expect(created.status).toBe(201); expect(created.body.data.order.subtotal).toBe(6000); expect(created.body.data.order.grandTotal).toBe(6250); expect(created.body.data.order.advancePaymentAmount).toBe(1200); expect(created.body.data.order.cashOnDeliveryAmount).toBe(5050); expect(created.body.data.order.advancePaymentStatus).toBe('pending'); expect(created.body.data.whatsappUrl).toContain('https://wa.me/923001234567?text='); expect(decodeURIComponent(created.body.data.whatsappUrl)).toContain('COD advance required (20% of bicycle subtotal): PKR 1,200'); expect(decodeURIComponent(created.body.data.whatsappUrl)).not.toContain('proof'); expect(denied.status).toBe(401); expect(allowed.status).toBe(200); expect(allowed.body.data.order.advancePaymentAmount).toBe(1200); const storedOrder = await Order.findOne({ orderNumber: created.body.data.order.orderNumber }); const markedAdvance = await request(app).patch(`/api/admin/orders/${storedOrder.id}/advance-payment-status`).set(authHeader(token)).send({ advancePaymentStatus: 'paid' }); expect(markedAdvance.status).toBe(200); expect(markedAdvance.body.data.order.advancePaymentStatus).toBe('paid'); const instructions = await request(app).get('/api/payments/instructions'); expect(instructions.body.data.bankTransfer).toContainEqual(expect.objectContaining({ method: 'EasyPaisa', accountTitle: 'Test Payment Account', accountNumber: '03000000000' })); const transfer = await request(app).post('/api/orders').send({ ...payload, paymentMethod: 'bank_transfer', items: [{ productId: product.id, quantity: 1 }] }); expect(transfer.status).toBe(201); expect(transfer.body.data.order.advancePaymentAmount).toBe(0); expect(transfer.body.data.order.cashOnDeliveryAmount).toBe(0); expect(transfer.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer); expect(decodeURIComponent(transfer.body.data.whatsappUrl)).not.toContain('proof'); const transferOrder = await request(app).get(`/api/orders/${transfer.body.data.order.orderNumber}`).set('X-Order-Access-Token', transfer.body.data.orderAccessToken); expect(transferOrder.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer); });
+  it('creates orders with COD advances and returns bank transfer details when selected', async () => { const category = await createCategory(); const product = await createProduct(category, { price: 3000, stockQuantity: 3 }); const payload = { customer: { name: 'Ali Khan', whatsapp: '+923001234567', address: 'House 1, Main Road, Quetta' }, items: [{ productId: product.id, quantity: 2, selectedOptions: { size: 'M', color: 'Black' } }], customerNotes: 'Please call first.' }; const created = await request(app).post('/api/orders').set('Idempotency-Key', 'abcdefghijklmno123').send(payload); const denied = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`); const allowed = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`).set('X-Order-Access-Token', created.body.data.orderAccessToken); expect(created.status).toBe(201); expect(created.body.data.order.subtotal).toBe(6000); expect(created.body.data.order.grandTotal).toBe(6250); expect(created.body.data.order.advancePaymentAmount).toBe(1200); expect(created.body.data.order.cashOnDeliveryAmount).toBe(5050); expect(created.body.data.order.advancePaymentStatus).toBe('pending'); expect(created.body.data.whatsappUrl).toContain('https://wa.me/923001234567?text='); expect(decodeURIComponent(created.body.data.whatsappUrl)).toContain('Payment method: Cash on delivery (please confirm on WhatsApp)'); expect(decodeURIComponent(created.body.data.whatsappUrl)).toContain('COD advance required (20% of bicycle subtotal): PKR 1,200'); expect(decodeURIComponent(created.body.data.whatsappUrl)).not.toContain('proof'); expect(denied.status).toBe(401); expect(allowed.status).toBe(200); expect(allowed.body.data.order.advancePaymentAmount).toBe(1200); const storedOrder = await Order.findOne({ orderNumber: created.body.data.order.orderNumber }); const markedAdvance = await request(app).patch(`/api/admin/orders/${storedOrder.id}/advance-payment-status`).set(authHeader(token)).send({ advancePaymentStatus: 'paid' }); expect(markedAdvance.status).toBe(200); expect(markedAdvance.body.data.order.advancePaymentStatus).toBe('paid'); const instructions = await request(app).get('/api/payments/instructions'); expect(instructions.body.data.bankTransfer).toContainEqual(expect.objectContaining({ method: 'EasyPaisa', accountTitle: 'Test Payment Account', accountNumber: '03000000000' })); const transfer = await request(app).post('/api/orders').send({ ...payload, paymentMethod: 'bank_transfer', items: [{ productId: product.id, quantity: 1 }] }); expect(transfer.status).toBe(201); expect(transfer.body.data.order.advancePaymentAmount).toBe(0); expect(transfer.body.data.order.cashOnDeliveryAmount).toBe(0); expect(transfer.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer); expect(decodeURIComponent(transfer.body.data.whatsappUrl)).not.toContain('proof'); const transferOrder = await request(app).get(`/api/orders/${transfer.body.data.order.orderNumber}`).set('X-Order-Access-Token', transfer.body.data.orderAccessToken); expect(transferOrder.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer); });
   it('covers order validation, idempotency, admin operations, and stock restoration', async () => {
     const category = await createCategory();
     const product = await createProduct(category, { price: 2000, stockQuantity: 4 });

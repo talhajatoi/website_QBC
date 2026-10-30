@@ -17,6 +17,7 @@ export const whatsappUrlForOrder = (order, settings) => {
   });
   lines.push('', `Subtotal: ${pkr(order.subtotal)}`, `Delivery: ${pkr(order.deliveryCharge)}`, `Grand total: ${pkr(order.grandTotal)}`);
   if (order.paymentMethod === 'cash_on_delivery') {
+    lines.push('Payment method: Cash on delivery (please confirm on WhatsApp)');
     lines.push('', `COD advance required (20% of bicycle subtotal): ${pkr(order.advancePaymentAmount)}`, `Remaining cash due on delivery: ${pkr(order.cashOnDeliveryAmount)}`);
     const instructions = getCodAdvancePaymentInstructions();
     if (instructions) {

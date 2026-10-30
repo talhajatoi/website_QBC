@@ -9,9 +9,37 @@ const api = axios.create({
   timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
+const tokenExpiration = (token) => {
+  const payload = token?.split(".")[1];
+  if (!payload) return 0;
+  try {
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(
+      atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=")),
+    );
+    return Number.isFinite(decoded.exp) ? decoded.exp : 0;
+  } catch {
+    return 0;
+  }
+};
+const saveRenewedAdminToken = (response) => {
+  const renewedToken = response.headers?.["x-admin-token"];
+  if (!renewedToken) return;
+  const currentToken = sessionStorage.getItem("qb_admin_token");
+  if (
+    currentToken &&
+    tokenExpiration(renewedToken) > tokenExpiration(currentToken)
+  ) {
+    sessionStorage.setItem("qb_admin_token", renewedToken);
+  }
+};
 api.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    saveRenewedAdminToken(response);
+    return response.data;
+  },
   (error) => {
+    saveRenewedAdminToken(error.response);
     if (axios.isCancel(error))
       return Promise.reject({
         cancelled: true,

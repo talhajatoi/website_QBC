@@ -3,11 +3,6 @@
   50% { transform: scale(1.12) translate3d(-1.2%, .6%, 0); }
 }
 
-@keyframes category-progress {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-
 .bike-hero {
   position: absolute;
   inset: 0;
@@ -40,17 +35,56 @@
   isolation: isolate;
 }
 
-.category-showcase__progress {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 2;
-  height: 3px;
-  transform: scaleX(0);
-  transform-origin: left;
+.category-rail {
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.category-rail::-webkit-scrollbar {
+  height: 0;
+}
+
+.category-rail--active {
+  scrollbar-width: thin;
+  scrollbar-color: #ffd400 transparent;
+}
+
+.category-rail--active::-webkit-scrollbar {
+  height: 8px;
+}
+
+.category-rail--active::-webkit-scrollbar-thumb {
+  border-radius: 999px;
   background: #ffd400;
-  animation: category-progress 2.2s linear forwards;
+}
+
+.category-rail__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 999px;
+  background: rgb(9 9 11 / 82%);
+  color: white;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 180ms ease, background 180ms ease;
+}
+
+.category-rail__arrow--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.category-rail__arrow:hover {
+  background: #111;
 }
 
 @media (prefers-reduced-motion: reduce) {

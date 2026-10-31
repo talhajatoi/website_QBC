@@ -12,4 +12,21 @@ export const DEFAULT_BUSINESS = Object.freeze({
     tiktok: '',
     youtube: '',
   }),
+  paymentMethods: Object.freeze({
+    cashOnDelivery: Object.freeze({
+      enabled: true,
+      name: 'Cash on delivery',
+      description: 'Confirm your order on WhatsApp.',
+    }),
+    bankTransfer: Object.freeze({
+      enabled: true,
+      name: 'Bank transfer',
+      description: 'Pay by bank transfer.',
+    }),
+    walletTransfer: Object.freeze({
+      enabled: true,
+      name: 'Wallet transfer',
+      description: 'Pay using EasyPaisa or JazzCash.',
+    }),
+  }),
 });

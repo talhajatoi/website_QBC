@@ -3,7 +3,7 @@ import { Product } from '../models/product.model.js';
 import { Order } from '../models/order.model.js';
 import { Review } from '../models/review.model.js';
 
-const orderStatuses = ['pending_confirmation', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'failed'];
+const orderStatuses = ['pending_confirmation', 'advance_received', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'failed'];
 
 export const dashboardSummary = asyncHandler(async (req, res) => {
   const [products, orderMetrics, reviewMetrics] = await Promise.all([

@@ -21,4 +21,4 @@ export const makeOrderItemsAndReserveStock = async (requestedItems) => {
   } catch (error) { await Promise.all(reserved.map((entry) => Product.updateOne({ _id: entry.product }, { $inc: { stockQuantity: entry.quantity } }))); throw error; }
 };
 export const releaseStock = (items) => Promise.all(items.map((item) => Product.updateOne({ _id: item.product }, { $inc: { stockQuantity: item.quantity } })));
-export const canTransition = (from, to) => ({ pending_confirmation: ['confirmed', 'cancelled', 'failed'], confirmed: ['processing', 'cancelled', 'failed'], processing: ['shipped', 'cancelled', 'failed'], shipped: ['delivered'], delivered: [], cancelled: [], failed: [] }[from] || []).includes(to);
+export const canTransition = (from, to) => ({ pending_confirmation: ['advance_received', 'confirmed', 'cancelled', 'failed'], advance_received: ['confirmed', 'cancelled', 'failed'], confirmed: ['processing', 'cancelled', 'failed'], processing: ['shipped', 'cancelled', 'failed'], shipped: ['delivered'], delivered: [], cancelled: [], failed: [] }[from] || []).includes(to);

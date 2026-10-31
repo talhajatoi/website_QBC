@@ -16,6 +16,7 @@ import { formatDate } from "../../utils/formatDate";
 
 const orderStatuses = [
   "pending_confirmation",
+  "advance_received",
   "confirmed",
   "processing",
   "shipped",

@@ -7,6 +7,7 @@ import { formatCurrency } from '../../utils/formatCurrency';
 
 const orderStatuses = [
   ['pending_confirmation', 'Pending confirmation'],
+  ['advance_received', 'Advance received'],
   ['confirmed', 'Confirmed'],
   ['processing', 'Processing'],
   ['shipped', 'Shipped'],

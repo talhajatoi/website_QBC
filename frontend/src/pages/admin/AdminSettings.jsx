@@ -93,6 +93,34 @@ export default function AdminSettings() {
                 ))}
               </div>
             </fieldset>
+            <fieldset className="mt-6 rounded-2xl border border-zinc-200 p-4">
+              <legend className="px-2 text-sm font-bold">Customer payment methods</legend>
+              <p className="mb-4 text-sm text-zinc-600">Choose which methods appear at checkout and customize their customer-facing names and descriptions. Bank and wallet account details remain configured securely on the backend.</p>
+              <div className="grid gap-4">
+                {[
+                  ['cashOnDelivery', 'Cash on delivery'],
+                  ['bankTransfer', 'Bank transfer'],
+                  ['walletTransfer', 'Wallet transfer'],
+                ].map(([key, defaultName]) => (
+                  <div className="rounded-xl border border-zinc-200 p-4" key={key}>
+                    <label className="flex items-center gap-2 text-sm font-bold">
+                      <input type="checkbox" {...businessForm.register(`paymentMethods.${key}.enabled`)} />
+                      Enable {defaultName}
+                    </label>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <label className="field">
+                        Customer-facing name
+                        <input className="input" maxLength="60" {...businessForm.register(`paymentMethods.${key}.name`, { required: true })} />
+                      </label>
+                      <label className="field">
+                        Description
+                        <textarea className="input min-h-20" maxLength="500" {...businessForm.register(`paymentMethods.${key}.description`)} />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </fieldset>
             <button disabled={businessForm.formState.isSubmitting} className="btn-primary mt-6">
               {businessForm.formState.isSubmitting ? 'Saving…' : 'Save store details'}
             </button>

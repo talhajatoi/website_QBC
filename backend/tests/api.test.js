@@ -9,6 +9,7 @@ import { Category } from '../src/models/category.model.js';
 import { Product } from '../src/models/product.model.js';
 import { Review } from '../src/models/review.model.js';
 import { Order } from '../src/models/order.model.js';
+import { BusinessSettings } from '../src/models/business-settings.model.js';
 import { env } from '../src/config/env.js';
 
 const adminCredentials = { email: 'admin@example.com', password: 'StrongPassword123' };
@@ -96,6 +97,11 @@ describe('platform basics and authentication', () => {
         tiktok: '',
         youtube: '',
       },
+      paymentMethods: {
+        cashOnDelivery: { enabled: false, name: 'Pay when delivered', description: 'Confirm on WhatsApp.' },
+        bankTransfer: { enabled: true, name: 'Direct bank payment', description: 'Use the account details below.' },
+        walletTransfer: { enabled: false, name: 'Mobile wallet', description: 'Wallet payments are paused.' },
+      },
     };
     const denied = await request(app).patch('/api/admin/business').send(settings);
     expect(denied.status).toBe(401);
@@ -107,6 +113,7 @@ describe('platform basics and authentication', () => {
       whatsappNumber: '923001234567',
     });
     expect((await request(app).get('/api/business')).body.data.business.storeName).toBe('Quetta Cycles');
+    expect((await request(app).get('/api/business')).body.data.business.paymentMethods).toEqual(settings.paymentMethods);
     const invalidMapsLink = await request(app).patch('/api/admin/business')
       .set(authHeader(token))
       .send({ ...settings, mapsUrl: 'https://example.com/not-a-map' });
@@ -163,6 +170,7 @@ describe('platform basics and authentication', () => {
     expect(response.body.data.sales).toEqual({ deliveredRevenue: 3250, deliveredOrders: 1 });
     expect(response.body.data.ordersByStatus).toEqual({
       pending_confirmation: 1,
+      advance_received: 0,
       confirmed: 0,
       processing: 0,
       shipped: 0,
@@ -338,7 +346,99 @@ describe('catalogue and review management', () => {
 
 describe('cart, checkout, and order authorization', () => {
   it('calculates a cart server-side and rejects excessive stock', async () => { const category = await createCategory(); const product = await createProduct(category, { price: 1000, stockQuantity: 2 }); const added = await request(app).post('/api/cart/items').send({ productId: product.id, quantity: 2, selectedOptions: { size: 'M', color: 'Black' } }); const invalid = await request(app).post('/api/cart/items').send({ productId: product.id, quantity: 3 }); expect(added.status).toBe(201); expect(added.body.data.cart.total).toBe(2000); expect(added.body.data.cartToken).toMatch(/^[a-f0-9]{64}$/); expect(invalid.status).toBe(422); });
-  it('creates orders with COD advances and returns bank transfer details when selected', async () => { const category = await createCategory(); const product = await createProduct(category, { price: 3000, stockQuantity: 3 }); const payload = { customer: { name: 'Ali Khan', whatsapp: '+923001234567', address: 'House 1, Main Road, Quetta' }, items: [{ productId: product.id, quantity: 2, selectedOptions: { size: 'M', color: 'Black' } }], customerNotes: 'Please call first.' }; const created = await request(app).post('/api/orders').set('Idempotency-Key', 'abcdefghijklmno123').send(payload); const denied = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`); const allowed = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`).set('X-Order-Access-Token', created.body.data.orderAccessToken); expect(created.status).toBe(201); expect(created.body.data.order.subtotal).toBe(6000); expect(created.body.data.order.grandTotal).toBe(6250); expect(created.body.data.order.advancePaymentAmount).toBe(1200); expect(created.body.data.order.cashOnDeliveryAmount).toBe(5050); expect(created.body.data.order.advancePaymentStatus).toBe('pending'); expect(created.body.data.whatsappUrl).toContain('https://wa.me/923001234567?text='); expect(decodeURIComponent(created.body.data.whatsappUrl)).toContain('Payment method: Cash on delivery (please confirm on WhatsApp)'); expect(decodeURIComponent(created.body.data.whatsappUrl)).toContain('COD advance required (20% of bicycle subtotal): PKR 1,200'); expect(decodeURIComponent(created.body.data.whatsappUrl)).not.toContain('proof'); expect(denied.status).toBe(401); expect(allowed.status).toBe(200); expect(allowed.body.data.order.advancePaymentAmount).toBe(1200); const storedOrder = await Order.findOne({ orderNumber: created.body.data.order.orderNumber }); const markedAdvance = await request(app).patch(`/api/admin/orders/${storedOrder.id}/advance-payment-status`).set(authHeader(token)).send({ advancePaymentStatus: 'paid' }); expect(markedAdvance.status).toBe(200); expect(markedAdvance.body.data.order.advancePaymentStatus).toBe('paid'); const instructions = await request(app).get('/api/payments/instructions'); expect(instructions.body.data.bankTransfer).toContainEqual(expect.objectContaining({ method: 'EasyPaisa', accountTitle: 'Test Payment Account', accountNumber: '03000000000' })); const transfer = await request(app).post('/api/orders').send({ ...payload, paymentMethod: 'bank_transfer', items: [{ productId: product.id, quantity: 1 }] }); expect(transfer.status).toBe(201); expect(transfer.body.data.order.advancePaymentAmount).toBe(0); expect(transfer.body.data.order.cashOnDeliveryAmount).toBe(0); expect(transfer.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer); expect(decodeURIComponent(transfer.body.data.whatsappUrl)).not.toContain('proof'); const transferOrder = await request(app).get(`/api/orders/${transfer.body.data.order.orderNumber}`).set('X-Order-Access-Token', transfer.body.data.orderAccessToken); expect(transferOrder.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer); });
+  it('creates orders with COD advances and separate bank and wallet transfer instructions', async () => {
+    const category = await createCategory();
+    const product = await createProduct(category, { price: 3000, stockQuantity: 4 });
+    const payload = {
+      customer: { name: 'Ali Khan', whatsapp: '+923001234567', address: 'House 1, Main Road, Quetta' },
+      items: [{ productId: product.id, quantity: 2, selectedOptions: { size: 'M', color: 'Black' } }],
+      customerNotes: 'Please call first.',
+    };
+    const created = await request(app).post('/api/orders').set('Idempotency-Key', 'abcdefghijklmno123').send(payload);
+    const denied = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`);
+    const allowed = await request(app).get(`/api/orders/${created.body.data.order.orderNumber}`)
+      .set('X-Order-Access-Token', created.body.data.orderAccessToken);
+
+    expect(created.status).toBe(201);
+    expect(created.body.data.order.subtotal).toBe(6000);
+    expect(created.body.data.order.grandTotal).toBe(6250);
+    expect(created.body.data.order.advancePaymentAmount).toBe(1200);
+    expect(created.body.data.order.cashOnDeliveryAmount).toBe(5050);
+    expect(created.body.data.order.advancePaymentStatus).toBe('pending');
+    expect(created.body.data.whatsappUrl).toContain('https://wa.me/923001234567?text=');
+    expect(decodeURIComponent(created.body.data.whatsappUrl))
+      .toContain('Payment method: Cash on delivery (please confirm on WhatsApp)');
+    expect(decodeURIComponent(created.body.data.whatsappUrl))
+      .toContain('COD advance required (20% of bicycle subtotal): PKR 1,200');
+    expect(decodeURIComponent(created.body.data.whatsappUrl)).not.toContain('proof');
+    expect(denied.status).toBe(401);
+    expect(allowed.status).toBe(200);
+    expect(allowed.body.data.order.advancePaymentAmount).toBe(1200);
+
+    const storedOrder = await Order.findOne({ orderNumber: created.body.data.order.orderNumber });
+    const markedAdvance = await request(app).patch(`/api/admin/orders/${storedOrder.id}/advance-payment-status`)
+      .set(authHeader(token)).send({ advancePaymentStatus: 'paid' });
+    expect(markedAdvance.status).toBe(200);
+    expect(markedAdvance.body.data.order.advancePaymentStatus).toBe('paid');
+    expect(markedAdvance.body.data.order.status).toBe('advance_received');
+    const advanceReceivedOrders = await request(app).get('/api/admin/orders?status=advance_received')
+      .set(authHeader(token));
+    expect(advanceReceivedOrders.status).toBe(200);
+    expect(advanceReceivedOrders.body.data.orders.map((order) => order._id)).toContain(storedOrder.id);
+    const revertedAdvance = await request(app).patch(`/api/admin/orders/${storedOrder.id}/advance-payment-status`)
+      .set(authHeader(token)).send({ advancePaymentStatus: 'pending' });
+    expect(revertedAdvance.body.data.order.status).toBe('pending_confirmation');
+    const confirmedAdvance = await request(app).patch(`/api/admin/orders/${storedOrder.id}/advance-payment-status`)
+      .set(authHeader(token)).send({ advancePaymentStatus: 'paid' });
+    expect(confirmedAdvance.body.data.order.status).toBe('advance_received');
+
+    const instructions = await request(app).get('/api/payments/instructions');
+    expect(instructions.body.data.bankTransfer).toContainEqual(expect.objectContaining({
+      method: 'Bank transfer', accountTitle: 'Test Bank Account', accountNumber: '1234567890',
+    }));
+    expect(instructions.body.data.walletTransfer).toContainEqual(expect.objectContaining({
+      method: 'EasyPaisa', accountTitle: 'Test Payment Account', accountNumber: '03000000000',
+    }));
+    const bankTransfer = await request(app).post('/api/orders')
+      .send({ ...payload, paymentMethod: 'bank_transfer', items: [{ productId: product.id, quantity: 1 }] });
+    expect(bankTransfer.status).toBe(201);
+    expect(bankTransfer.body.data.order.advancePaymentAmount).toBe(0);
+    expect(bankTransfer.body.data.order.cashOnDeliveryAmount).toBe(0);
+    expect(bankTransfer.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer);
+    expect(decodeURIComponent(bankTransfer.body.data.whatsappUrl)).not.toContain('proof');
+    const bankTransferOrder = await request(app).get(`/api/orders/${bankTransfer.body.data.order.orderNumber}`)
+      .set('X-Order-Access-Token', bankTransfer.body.data.orderAccessToken);
+    expect(bankTransferOrder.body.data.paymentInstructions).toEqual(instructions.body.data.bankTransfer);
+    const walletTransfer = await request(app).post('/api/orders')
+      .send({ ...payload, paymentMethod: 'wallet_transfer', items: [{ productId: product.id, quantity: 1 }] });
+    expect(walletTransfer.status).toBe(201);
+    expect(walletTransfer.body.data.paymentInstructions).toEqual(instructions.body.data.walletTransfer);
+    const walletTransferOrder = await request(app).get(`/api/orders/${walletTransfer.body.data.order.orderNumber}`)
+      .set('X-Order-Access-Token', walletTransfer.body.data.orderAccessToken);
+    expect(walletTransferOrder.body.data.paymentInstructions).toEqual(instructions.body.data.walletTransfer);
+  });
+  it('rejects disabled payment methods before reserving inventory', async () => {
+    const category = await createCategory();
+    const product = await createProduct(category);
+    await BusinessSettings.create({
+      key: 'default',
+      storeName: 'Quetta Bikes',
+      whatsappNumber: '923001234567',
+      paymentMethods: {
+        cashOnDelivery: { enabled: false, name: 'Pay later', description: '' },
+        bankTransfer: { enabled: true, name: 'Bank transfer', description: '' },
+        walletTransfer: { enabled: true, name: 'Wallet transfer', description: '' },
+      },
+    });
+    const response = await request(app).post('/api/orders').send({
+      customer: { name: 'Ali Khan', whatsapp: '+923001234567', address: 'House 1, Main Road, Quetta' },
+      items: [{ productId: product.id, quantity: 1 }],
+      paymentMethod: 'cash_on_delivery',
+    });
+    expect(response.status).toBe(422);
+    expect(response.body.message).toBe('This payment method is currently unavailable');
+    expect((await Product.findById(product.id)).stockQuantity).toBe(5);
+  });
   it('covers order validation, idempotency, admin operations, and stock restoration', async () => {
     const category = await createCategory();
     const product = await createProduct(category, { price: 2000, stockQuantity: 4 });

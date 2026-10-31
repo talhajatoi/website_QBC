@@ -11,6 +11,16 @@ export const getCodAdvancePaymentInstructions = () => {
 };
 
 export const getBankTransferPaymentInstructions = () => [
+  (env.PAYMENT_BANK_ACCOUNT_NUMBER || env.PAYMENT_BANK_IBAN) && {
+    method: 'Bank transfer',
+    bankName: env.PAYMENT_BANK_NAME || '',
+    accountTitle: env.PAYMENT_BANK_ACCOUNT_TITLE || '',
+    accountNumber: env.PAYMENT_BANK_ACCOUNT_NUMBER || '',
+    iban: env.PAYMENT_BANK_IBAN || '',
+  },
+].filter(Boolean);
+
+export const getWalletTransferPaymentInstructions = () => [
   env.PAYMENT_EASYPAISA_ACCOUNT_NUMBER && {
     method: 'EasyPaisa',
     accountTitle: env.PAYMENT_EASYPAISA_ACCOUNT_TITLE || '',
@@ -20,12 +30,5 @@ export const getBankTransferPaymentInstructions = () => [
     method: 'JazzCash',
     accountTitle: env.PAYMENT_JAZZCASH_ACCOUNT_TITLE || '',
     accountNumber: env.PAYMENT_JAZZCASH_ACCOUNT_NUMBER,
-  },
-  (env.PAYMENT_BANK_ACCOUNT_NUMBER || env.PAYMENT_BANK_IBAN) && {
-    method: 'Bank transfer',
-    bankName: env.PAYMENT_BANK_NAME || '',
-    accountTitle: env.PAYMENT_BANK_ACCOUNT_TITLE || '',
-    accountNumber: env.PAYMENT_BANK_ACCOUNT_NUMBER || '',
-    iban: env.PAYMENT_BANK_IBAN || '',
   },
 ].filter(Boolean);

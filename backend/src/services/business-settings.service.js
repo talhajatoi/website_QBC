@@ -19,4 +19,21 @@ export const publicBusinessDetails = (settings) => ({
     tiktok: settings.socialLinks.tiktok,
     youtube: settings.socialLinks.youtube,
   },
+  paymentMethods: {
+    cashOnDelivery: {
+      enabled: settings.paymentMethods?.cashOnDelivery?.enabled ?? true,
+      name: settings.paymentMethods?.cashOnDelivery?.name || 'Cash on delivery',
+      description: settings.paymentMethods?.cashOnDelivery?.description || '',
+    },
+    bankTransfer: {
+      enabled: settings.paymentMethods?.bankTransfer?.enabled ?? true,
+      name: settings.paymentMethods?.bankTransfer?.name || 'Bank transfer',
+      description: settings.paymentMethods?.bankTransfer?.description || '',
+    },
+    walletTransfer: {
+      enabled: settings.paymentMethods?.walletTransfer?.enabled ?? true,
+      name: settings.paymentMethods?.walletTransfer?.name || 'Wallet transfer',
+      description: settings.paymentMethods?.walletTransfer?.description || '',
+    },
+  },
 });

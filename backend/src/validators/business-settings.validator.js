@@ -35,4 +35,25 @@ export const businessSettingsSchema = z.object({
     tiktok: optionalUrl.default(''),
     youtube: optionalUrl.default(''),
   }).default({}),
+  paymentMethods: z.object({
+    cashOnDelivery: z.object({
+      enabled: z.boolean(),
+      name: z.string().trim().min(1).max(60),
+      description: z.string().trim().max(500).default(''),
+    }),
+    bankTransfer: z.object({
+      enabled: z.boolean(),
+      name: z.string().trim().min(1).max(60),
+      description: z.string().trim().max(500).default(''),
+    }),
+    walletTransfer: z.object({
+      enabled: z.boolean(),
+      name: z.string().trim().min(1).max(60),
+      description: z.string().trim().max(500).default(''),
+    }),
+  }).default({
+    cashOnDelivery: { enabled: true, name: 'Cash on delivery', description: '' },
+    bankTransfer: { enabled: true, name: 'Bank transfer', description: '' },
+    walletTransfer: { enabled: true, name: 'Wallet transfer', description: '' },
+  }),
 });

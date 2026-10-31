@@ -16,8 +16,11 @@ export const whatsappUrlForOrder = (order, settings) => {
     lines.push(`- ${item.name} (${item.sku})${options ? ` — ${options}` : ''}`, `  ${item.quantity} × ${pkr(item.unitPrice)} = ${pkr(item.lineTotal)}`);
   });
   lines.push('', `Subtotal: ${pkr(order.subtotal)}`, `Delivery: ${pkr(order.deliveryCharge)}`, `Grand total: ${pkr(order.grandTotal)}`);
+  const paymentOptions = settings.paymentMethods || {};
   if (order.paymentMethod === 'cash_on_delivery') {
-    lines.push('Payment method: Cash on delivery (please confirm on WhatsApp)');
+    const option = paymentOptions.cashOnDelivery;
+    lines.push(`Payment method: ${option?.name || 'Cash on delivery'} (please confirm on WhatsApp)`);
+    if (option?.description) lines.push(option.description);
     lines.push('', `COD advance required (20% of bicycle subtotal): ${pkr(order.advancePaymentAmount)}`, `Remaining cash due on delivery: ${pkr(order.cashOnDeliveryAmount)}`);
     const instructions = getCodAdvancePaymentInstructions();
     if (instructions) {
@@ -26,6 +29,11 @@ export const whatsappUrlForOrder = (order, settings) => {
       if (instructions.accountNumber) lines.push(`Account number: ${instructions.accountNumber}`);
       if (instructions.iban) lines.push(`IBAN: ${instructions.iban}`);
     } else lines.push('Please contact us in this WhatsApp chat for advance payment details.');
+  }
+  if (order.paymentMethod === 'bank_transfer' || order.paymentMethod === 'wallet_transfer') {
+    const option = order.paymentMethod === 'bank_transfer' ? paymentOptions.bankTransfer : paymentOptions.walletTransfer;
+    if (option?.name) lines.push(`Payment method: ${option.name}`);
+    if (option?.description) lines.push(option.description);
   }
   lines.push(`Address: ${order.customer.address}`);
   if (order.customerNotes) lines.push(`Notes: ${order.customerNotes}`);
